@@ -1,0 +1,51 @@
+
+interrupt {
+    let s = read_byte(0x80)
+    print_byte(s, 0x4000 + count)
+    count = count+1
+}
+
+let len = read_byte(0x4000)
+let i = 1
+len = len + 1
+let arg = 0x4000 + len 
+while(i <= len){
+    let addr = 0x4000 + i
+    let letter = read_byte(addr)
+    if (letter == 37){
+        i = i + 1
+        if (i<= len){
+            letter = read_byte(addr)
+            if (letter == 100){
+                let num = read_word(arg)
+                arg = arg+4
+                if (num<0){
+                    print_byte(45,0x84) 
+                    num = 0 - num
+                }
+                 if (num == 0) {
+                    print_byte(48, 0x84) 
+                } else {
+                    let start_addr = 0x6000
+                    let cur_ad = 0x6000
+                    while (num!= 0){
+                        let char = num%10 + 48
+                        print_byte(char, cur_ad)
+                        cur_ad = cur_ad+1
+                        num = num/10
+                    }
+                    cur_ad = cur_ad - 1
+                    while(start_addr<=cur_ad){
+                        char = read_byte(cur_ad)
+                        print_byte(char, 0x84)
+                        cur_ad = cur_ad - 1
+                    }
+                }
+            }
+        }
+    }
+    else{
+        print_byte(letter, 0x84)
+    }
+    i = i+1
+}
