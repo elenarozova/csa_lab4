@@ -267,11 +267,11 @@ def do_print(line):
             else:
                 printl(f"store [{port}], r0")
         else:
-            addr = symbol_table[port]
+            printl(f"load r1, [{symbol_table[port]:04X}]")
             if "print_byte" in line:
-                printl(f"store_byte [{addr:04X}], r0")
+                printl(f"store_byte [r1], r0")             
             else:
-                printl(f"store [{addr:04X}], r0")
+                printl(f"store [r1], r0")                 
 
 
 def do_change_value(line):
