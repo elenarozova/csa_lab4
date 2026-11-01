@@ -1,4 +1,2 @@
-let i = 0
-while (i < 10) {
-    break
-}
+let msg = "ok"
+let num = 42

@@ -3,6 +3,10 @@ class Number:
         self.value = value
         self.raw = raw if raw is not None else str(value)
 
+class String:
+    def __init__(self, value):
+        self.value = value
+
 class Variable:
     def __init__(self, name):
         self.name = name
@@ -168,6 +172,8 @@ def print_ast(node, indent=0, file=None):
     elif isinstance(node, Interrupt):
         print(f"{prefix}Interrupt", file=file)
         print_ast(node.body, indent + 1, file)
+    elif isinstance(node, String):
+        print(f"{prefix}String('{node.value}')", file=file)
 
 
 

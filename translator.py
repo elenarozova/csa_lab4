@@ -1,6 +1,6 @@
 import sys
 
-from ast_parser import Assign, Break, IfStmt, Interrupt, LetDecl, Number, PrintByte, PrintWord, Program, Trap, WhileStmt, parse_a_lot_of_conditions, parse_expression, parse_let, print_ast
+from ast_parser import Assign, Break, IfStmt, Interrupt, LetDecl, Number, PrintByte, PrintWord, Program, String, Trap, WhileStmt, parse_a_lot_of_conditions, parse_expression, parse_let, print_ast
 
 symbol_table = {"count": 0x3000}  
 var_addr = 0x3004  
@@ -83,11 +83,20 @@ def translate(input_file, output_file):
 
 def do_let(line):
     global var_addr, symbol_table
-    parts = line.split('=')  
+
+    parts = line.split('=', 1)  
     var_part = parts[0].strip()  
     value_part = parts[1].strip()
     var_name = var_part.replace('let ', '').strip()
-    symbol_table[var_name] = var_addr
+    current_addr = var_addr
+    symbol_table[var_name] = current_addr
+    if value_part.startswith('"') and value_part.endswith('"'):
+        text = value_part[1:-1]
+        string_node = String(text)
+        let_node = LetDecl(var_name, string_node)
+        add_to_current_context(let_node)
+        var_addr = put_pstr(text, current_addr)
+        return
     var_addr = var_addr + 4
     value_node = parse_expression(value_part, symbol_table)
     let_node = LetDecl(var_name, value_node)
@@ -96,6 +105,15 @@ def do_let(line):
         load_operand(value_part, "r0")
        
     printl(f"store [{symbol_table[var_name]:04X}], r0")
+
+def put_pstr(text, current_addr):
+    lenght = len(text)
+    printl(f"store_byte [{current_addr:04X}], #{lenght}")
+    for i in range(0, len(text)):
+        addr = current_addr+i+1
+        ascii_n = ord(text[i])
+        printl(f"store_byte [{addr:04X}], #{ascii_n}")
+    return current_addr+lenght+1
 
 def load_operand(value, register):
     if ("read_word" in value) or ("read_byte" in value):
@@ -398,6 +416,7 @@ def do_condition(condition, label, jump_if_false=True):
             printl(f"jeq {label}")
         elif oper == "!=":
             printl(f"jne {label}")
+
 
 def do_trap(line):
     num = line.split('(')[1].split(')')[0].strip()
