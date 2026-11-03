@@ -37,14 +37,16 @@ OPCODES = {
 }
 
 def assemble(input_file, output_bin, output_log):
-    labels, instructions = go_first("program.asm")
+    labels, instructions = go_first(input_file)
     print(f"Метки: {labels}")
     print(f"Инструкций: {len(instructions)}")
-    data = bytearray() 
+    data = bytearray(0x10000) 
     log_lines = []   
     for instr in instructions:
         bytes_list = encode_instruction(instr, labels)
-        data.extend(bytes_list)
+        addr = instr.address
+        for i, byte in enumerate(bytes_list):
+            data[addr + i] = byte
         hex_code = ' '.join(f'{b:02X}' for b in bytes_list)
         line = f"{instr.address:04X} - {hex_code:<15} - {instr.raw_line}"
         log_lines.append(line)
@@ -149,79 +151,201 @@ def parse_address(addr_str, labels):
         return labels[addr_str]
     else:
         return 0
-    
 
-def calculate_length(mnemonic,raw):
-    if mnemonic in ['halt', 'reti', 'int_enable', 'int_disable']:
-        return 1
-    if not raw:
-        return 3 
-    last_op = raw[-1].rstrip(',')
-    if last_op.startswith('#'):
-        num_str = last_op[1:]
+def get_operand_mode(op_str):
+    op_str = op_str.strip().rstrip(',')
+    if op_str.upper() == 'R_INT':
+        return 0
+    if op_str.startswith('r') and op_str[1:].isdigit():
+        return 0
+    if op_str.startswith('#'):
+        num_str = op_str[1:]
         num = int(num_str, 16) if num_str.startswith('0x') else int(num_str)
         if -128 <= num <= 127:
-            return 4 
+            return 1  #8 бит
         else:
-            return 5
-    if last_op.startswith('[') or last_op.isalnum(): 
-        return 5 
+            return 2 
+    if op_str.startswith('[') and op_str.endswith(']'):
+        inner = op_str[1:-1]
+        if '+' in inner:
+            parts = inner.split('+')
+            p1 = parts[0].strip()
+            p2 = parts[1].strip()
+            p1_is_reg = p1.startswith('r') and p1[1:].isdigit()
+            p2_is_reg = p2.startswith('r') and p2[1:].isdigit()
+            if p1_is_reg and p2_is_reg:
+                return 5  #[rN + rM]
+            else:
+                return 6  #[addr + rN]
+        if inner.startswith('r') and inner[1:].isdigit():
+            return 4  #[rN]
+        return 3  #[addr]
     return 3
+    
+
+def calculate_length(mnemonic, raw):
+    if mnemonic in ['halt', 'reti', 'int_enable', 'int_disable']:
+        return 1
+    if mnemonic in ['jmp', 'jeq', 'jne', 'jlt', 'jgt']:
+        return 3
+    if not raw:
+        return 3
+    if mnemonic in ['store', 'store_byte']:
+        mode = get_operand_mode(raw[0])  
+    elif mnemonic in ['load', 'load_byte', 'cmp']:
+        mode = get_operand_mode(raw[1])  
+    else:
+        mode = get_operand_mode(raw[2])  
+    if mode in [0, 4, 5]:
+        return 3
+    elif mode == 1:
+        return 4
+    elif mode in [2, 3, 6]:
+        return 5
+    else:
+        return 3
     
 
 
 def encode_instruction(instr, labels):
     mnemonic = instr.mnemonic
     oper = instr.operands
+    
     if mnemonic in ['halt', 'reti', 'int_enable', 'int_disable']:
         return [OPCODES[mnemonic]]
+    
     if mnemonic in ['jmp', 'jeq', 'jne', 'jlt', 'jgt']:
-        if len(oper)>=1:
+        if len(oper) >= 1:
             mode, addr = parse_oper(oper[0].rstrip(','), labels)
             bytes_list = [OPCODES[mnemonic]]
-            bytes_list.append(addr & 0xFF)  
+            bytes_list.append(addr & 0xFF)
             bytes_list.append((addr >> 8) & 0xFF)
             return bytes_list
+    
     bytes_list = [OPCODES[mnemonic]]
     parsed_op = []
     for op_str in oper:
         mode, value = parse_oper(op_str.rstrip(','), labels)
         parsed_op.append((mode, value))
-    if len(oper)>=3:
-        rd = parsed_op[0][1] 
+    
+    # Двухоперандные инструкции
+    if mnemonic in ['load', 'store', 'load_byte', 'store_byte', 'cmp']:
+        if len(parsed_op) == 2:
+            op1_mode, op1_val = parsed_op[0]
+            op2_mode, op2_val = parsed_op[1]
+            
+            if mnemonic in ['load', 'load_byte']:
+                rd = op1_val
+                if op2_mode in [4, 5]:
+                    rs = op2_val
+                else:
+                    rs = 0
+                byte1 = (rd << 4) | rs
+                if op2_mode == 0:
+                    byte2 = (op2_mode << 4) | op2_val
+                else:
+                    byte2 = (op2_mode << 4) | 0
+                    
+                bytes_list.append(byte1)
+                bytes_list.append(byte2)
+                
+                # Добавляем байты для ВТОРОГО операнда (адрес/константа)
+                if op2_mode == 1:
+                    bytes_list.append(op2_val & 0xFF)
+                elif op2_mode in [2, 3]:
+                    bytes_list.append(op2_val & 0xFF)
+                    bytes_list.append((op2_val >> 8) & 0xFF)
+                elif op2_mode == 6:
+                    addr = op2_val & 0xFFFF
+                    bytes_list.append(addr & 0xFF)
+                    bytes_list.append((addr >> 8) & 0xFF)
+                    
+            elif mnemonic in ['store', 'store_byte']:
+                rd = op2_val
+                if op1_mode in [4, 5]:
+                    rs = op1_val
+                else:
+                    rs = 0
+                byte1 = (rd << 4) | rs
+                
+                # Для MODE 6 индексный регистр в Rt
+                if op1_mode == 6:
+                    reg = (op1_val >> 16) & 0xF
+                    byte2 = (op1_mode << 4) | reg
+                else:
+                    byte2 = (op1_mode << 4) | 0
+                    
+                bytes_list.append(byte1)
+                bytes_list.append(byte2)
+                
+                # Добавляем байты для ПЕРВОГО операнда (адрес)
+                if op1_mode == 1:
+                    bytes_list.append(op1_val & 0xFF)
+                elif op1_mode in [2, 3]:
+                    bytes_list.append(op1_val & 0xFF)
+                    bytes_list.append((op1_val >> 8) & 0xFF)
+                elif op1_mode == 6:  # <-- ИСПРАВЛЕНО: op1_mode, а не op2_mode!
+                    addr = op1_val & 0xFFFF
+                    bytes_list.append(addr & 0xFF)
+                    bytes_list.append((addr >> 8) & 0xFF)
+                    
+            elif mnemonic == 'cmp':
+                # cmp Rs, operand
+                rs = op1_val
+                byte1 = (0 << 4) | rs
+                byte2 = (op2_mode << 4) | op2_val
+                bytes_list.append(byte1)
+                bytes_list.append(byte2)
+                
+                if op2_mode == 1:
+                    bytes_list.append(op2_val & 0xFF)
+                elif op2_mode in [2, 3]:
+                    bytes_list.append(op2_val & 0xFF)
+                    bytes_list.append((op2_val >> 8) & 0xFF)
+                    
+        return bytes_list
+    
+    # Трёхоперандные инструкции
+    if len(parsed_op) >= 3:
+        rd = parsed_op[0][1]
         rs = parsed_op[1][1]
         mode = parsed_op[2][0]
-        rt = parsed_op[2][1]
         val = parsed_op[2][1]
+        
         byte1 = (rd << 4) | rs
         bytes_list.append(byte1)
-        if mode == 1: #константа 8 бит
-            byte2 = (mode << 4) | 0 
-            bytes_list.append(byte2)
-            bytes_list.append(rt & 0xff)
-        elif mode == 2:  #константа 16 бит
-            byte2 = (mode << 4) | 0 
-            bytes_list.append(byte2)
-            bytes_list.append(rt & 0xff) 
-            bytes_list.append((rt >> 8) & 0xff)
-        elif mode == 3:  #прямая адресация
-            byte2 = (mode << 4) | 0 
-            bytes_list.append(byte2)
-            bytes_list.append(rt & 0xff) 
-            bytes_list.append((rt >> 8) & 0xff) 
-        elif mode == 4: 
+        
+        if mode == 0:
             byte2 = (mode << 4) | val
             bytes_list.append(byte2)
-        elif mode == 5:  
-            byte2 = (mode << 4) | (val&0x0f)
+        elif mode == 1:
+            byte2 = (mode << 4) | 0
             bytes_list.append(byte2)
-        elif mode == 6: #конст и индекс
-            reg = (val >> 16) & 0xf
-            addr = val & 0xffff
-            byte2 = (mode << 4) | reg 
+            bytes_list.append(val & 0xFF)
+        elif mode == 2:
+            byte2 = (mode << 4) | 0
             bytes_list.append(byte2)
-            bytes_list.append(addr & 0xff)        
-            bytes_list.append((addr >> 8) & 0xff)
+            bytes_list.append(val & 0xFF)
+            bytes_list.append((val >> 8) & 0xFF)
+        elif mode == 3:
+            byte2 = (mode << 4) | 0
+            bytes_list.append(byte2)
+            bytes_list.append(val & 0xFF)
+            bytes_list.append((val >> 8) & 0xFF)
+        elif mode == 4:
+            byte2 = (mode << 4) | val
+            bytes_list.append(byte2)
+        elif mode == 5:
+            byte2 = (mode << 4) | (val & 0x0F)
+            bytes_list.append(byte2)
+        elif mode == 6:
+            reg = (val >> 16) & 0xF
+            addr = val & 0xFFFF
+            byte2 = (mode << 4) | reg
+            bytes_list.append(byte2)
+            bytes_list.append(addr & 0xFF)
+            bytes_list.append((addr >> 8) & 0xFF)
+            
     return bytes_list
     
 

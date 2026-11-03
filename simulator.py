@@ -41,8 +41,8 @@ class Memory:
         self.processor.cycles += 1
         self.data[address] = value & 0xFF
         if address == 0x84:  
-            self.processor.output_buffer.append(chr(value))
-            self.processor.log(f"[Такт {self.processor.cycles}] ВЫВОД: символ '{chr(value)}' (ASCII {value})")
+            self.processor.output_buffer.append(chr(value  & 0xFF))
+            self.processor.log(f"[Такт {self.processor.cycles}] ВЫВОД: символ '{chr(value & 0xFF )}' (ASCII {value & 0xFF })")
 
     def write_word(self, address, value):
         self.write_byte(address, value)
@@ -518,7 +518,7 @@ if __name__ == "__main__":
         print(f"Ошибка: {e}")
         sys.exit(1)
 
-    cpu.input_schedule = [(10, 65)]
+    cpu.input_schedule = [(1, 65)]
     print("Выполнение программы...")
     cpu.run()
     print("\n" + "=" * 60)

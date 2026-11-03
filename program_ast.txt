@@ -15,7 +15,7 @@ Program
           Number(1)
   LetDecl(digit)
     ReadWord
-      Number(0x80)
+      Number(0x4000)
   IfStmt
     Compare(<)
       Variable(digit)

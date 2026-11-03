@@ -7,7 +7,7 @@ load r0, R_INT
 store [3004], r0
 load r0, [3004]
 load r1, [3000]
-store_byte [0x4000 + r1], r0
+store_byte [0x4000+r1], r0
 load r0, [3000]
 load r3, #1
 add r0, r0, r3
@@ -19,7 +19,7 @@ load r3, [0x0094]
 reti
 org 0x100
 int_enable
-load r1, #0x80
+load r1, #0x4000
 load r0, [r1]
 store [3008], r0
 load r0, [3008]

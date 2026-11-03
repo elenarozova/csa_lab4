@@ -274,9 +274,9 @@ def do_print(line):
         var_addr = symbol_table[var_name]
         printl(f"load r1, [{var_addr:04X}]")
         if "print_byte" in line:
-            printl(f"store_byte [{base} + r1], r0")
+            printl(f"store_byte [{base}+r1], r0")
         else:
-            printl(f"store [{base} + r1], r0")
+            printl(f"store [{base}+r1], r0")
     else:
         if port.startswith('0x') or port.isdigit():
             if "print_byte" in line:
