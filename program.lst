@@ -1,0 +1,71 @@
+0000 - 11              - store [0x0088], r0
+0005 - 11              - store [0x008C], r1
+000A - 11              - store [0x0090], r2
+000F - 11              - store [0x0094], r3
+0014 - 10              - load r0, R_INT
+0017 - 11              - store [3004], r0
+001C - 10              - load r0, [3004]
+0021 - 10              - load r1, [3000]
+0026 - 13 00           - store_byte [0x4000 + r1], r0
+002B - 10              - load r0, [3000]
+0030 - 10              - load r3, #1
+0034 - 00 00           - add r0, r0, r3
+0039 - 11              - store [3000], r0
+003E - 10              - load r0, [0x0088]
+0043 - 10              - load r1, [0x008C]
+0048 - 10              - load r2, [0x0090]
+004D - 10              - load r3, [0x0094]
+0052 - 42              - reti
+0100 - 40              - int_enable
+0101 - 10              - load r1, #0x80
+0106 - 10              - load r0, [r1]
+010B - 11              - store [3008], r0
+0110 - 10              - load r0, [3008]
+0115 - 10              - load r2, #1
+0119 - 20              - cmp r0, r2
+011E - 34 DE 01        - jgt end_if_0
+0121 - 31 DE 01        - jeq end_if_0
+0124 - 10              - load r0, #-1
+0128 - 11              - store [0x84], r0
+012D - 30 DE 01        - jmp end_if_0
+0130 - 10              - load r0, [3008]
+0135 - 10              - load r2, #1
+0139 - 20              - cmp r0, r2
+013E - 32 DE 01        - jne end_if_1
+0141 - 10              - load r0, #0
+0145 - 11              - store [0x84], r0
+014A - 30 DE 01        - jmp end_if_1
+014D - 10              - load r0, #0
+0151 - 11              - store [300C], r0
+0156 - 10              - load r0, #2
+015A - 11              - store [3010], r0
+015F - 10              - load r0, [3010]
+0164 - 10              - load r3, [3010]
+0169 - 03 00           - mul r0, r0, r3
+016E - 10              - load r2, [3008]
+0173 - 20              - cmp r0, r2
+0178 - 34 B8 01        - jgt end_while_0
+017B - 10              - load r0, [3008]
+0180 - 10              - load r3, [3010]
+0185 - 05 00           - mod r0, r0, r3
+018A - 10              - load r2, #0
+018E - 20              - cmp r0, r2
+0193 - 32 A2 01        - jne end_if_2
+0196 - 10              - load r0, #1
+019A - 11              - store [300C], r0
+019F - 30 B8 01        - jmp end_while_0
+01A2 - 10              - load r0, [3010]
+01A7 - 10              - load r3, #1
+01AB - 00 00           - add r0, r0, r3
+01B0 - 11              - store [3010], r0
+01B5 - 30 5F 01        - jmp while_0
+01B8 - 10              - load r0, [300C]
+01BD - 10              - load r2, #1
+01C1 - 20              - cmp r0, r2
+01C6 - 32 DE 01        - jne end_if_3
+01C9 - 10              - load r0, #0
+01CD - 11              - store [0x84], r0
+01D2 - 30 DE 01        - jmp end_if_3
+01D5 - 10              - load r0, #1
+01D9 - 11              - store [0x84], r0
+01DE - 43              - halt

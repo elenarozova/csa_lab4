@@ -70,7 +70,6 @@ def translate(input_file, output_file):
             elif line.startswith("break"): do_break()
             elif line.startswith("print_word"): do_print(line)
             elif line.startswith("print_byte"): do_print(line)
-            elif line.startswith("trap"): do_trap(line)
             #elif line.replace("}", "").strip().startswith('else'): do_else()
             elif '=' in line: do_change_value(line)
 
@@ -418,10 +417,6 @@ def do_condition(condition, label, jump_if_false=True):
             printl(f"jne {label}")
 
 
-def do_trap(line):
-    num = line.split('(')[1].split(')')[0].strip()
-    add_to_current_context(Trap(num))
-    printl(f"trap #{num}")
 
 if __name__ == '__main__':
        if len(sys.argv) > 1:

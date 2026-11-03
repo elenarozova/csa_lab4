@@ -1,3 +1,8 @@
+interrupt {
+    let s = read_byte(0x80)
+    print_byte(s, 0x4000 + count)
+    count = count+1
+}
 let digit = read_word(0x80)
 if (digit<1){
     print_word(-1, 0x84)

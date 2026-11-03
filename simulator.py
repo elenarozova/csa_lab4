@@ -1,3 +1,5 @@
+import sys
+
 class Memory:
     def __init__(self, processor, size = 0x10000):
         self.processor = processor
@@ -38,6 +40,9 @@ class Memory:
     def write_byte(self, address, value):
         self.processor.cycles += 1
         self.data[address] = value & 0xFF
+        if address == 0x84:  
+            self.processor.output_buffer.append(chr(value))
+            self.processor.log(f"[Такт {self.processor.cycles}] ВЫВОД: символ '{chr(value)}' (ASCII {value})")
 
     def write_word(self, address, value):
         self.write_byte(address, value)
@@ -101,8 +106,8 @@ class Processor:
         for i in range(3, instr_len):
             self.ir.append(self.memory.read_byte(self.pc + i))
         ir_hex = ' '.join(f'{b:02X}' for b in self.ir)
-        print(f"[Такт {self.cycles}] FETCH: PC=0x{self.pc:04X}, IR=[{ir_hex}]")
-        print(f"[Такт {self.cycles}] DECODE: опкод=0x{opcode:02X}")
+        self.log(f"[Такт {self.cycles}] FETCH: PC=0x{self.pc:04X}, IR=[{ir_hex}]")
+        self.log(f"[Такт {self.cycles}] DECODE: опкод=0x{opcode:02X}")
 
         if opcode in [0x40, 0x41, 0x42, 0x43]: 
             rd = rs = mode = rt = None
@@ -112,13 +117,9 @@ class Processor:
             rs = self.ir[1] & 0x0F
             rt = self.ir[2] & 0x0F
             imm = None
-            print(f"[Такт {self.cycles}] DECODE: Rd=R{rd}, Rs=R{rs}, MODE={mode}, Rt=R{rt}")
-
-        if opcode == 0x43:
-            print(f"[Такт {self.cycles}] EXECUTE: halt - остановка процессора")
-            return False
+            self.log(f"[Такт {self.cycles}] DECODE: Rd=R{rd}, Rs=R{rs}, MODE={mode}, Rt=R{rt}")
         
-        elif opcode == 0x00:
+        if opcode == 0x00:
             if mode in [0, 1, 2]:
                 op2 = self.get_operand_value(mode, rt)
             else:
@@ -126,7 +127,7 @@ class Processor:
                 op2 =self.memory.read_word(addr)
             result = self.regs[rs] + op2
             self.update_flags(result,"add",self.regs[rs], op2 )
-            print(f"[Такт {self.cycles}] EXECUTE: add R{rd} = R{rs}({self.regs[rs]}) + {op2} = {result}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: add R{rd} = R{rs}({self.regs[rs]}) + {op2} = {result}")
             self.write_register(rd, result)
             self.pc += instr_len
             self.dump_state()
@@ -140,17 +141,17 @@ class Processor:
                 op2 =self.memory.read_word(addr)
             result = self.regs[rs] - op2
             self.update_flags(result, "sub", self.regs[rs], op2)
-            print(f"[Такт {self.cycles}] EXECUTE: sub R{rd} = R{rs}({self.regs[rs]}) - {op2} = {result}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: sub R{rd} = R{rs}({self.regs[rs]}) - {op2} = {result}")
             self.write_register(rd, result)
             self.pc += instr_len
             return True
         elif opcode == 0x02:
             if mode not in [0, 1, 2]:
-                print(f"[Такт {self.cycles}] EXECUTE: adc не поддерживает MODE {mode}")
+                self.log(f"[Такт {self.cycles}] EXECUTE: adc не поддерживает MODE {mode}")
                 return False
             op2 = self.get_operand_value(mode, rt)
             result = self.regs[rs] + op2 + self.flag_c
-            print(f"[Такт {self.cycles}] EXECUTE: adc R{rd} = R{rs}({self.regs[rs]}) + {op2} + C{self.flag_c} = {result}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: adc R{rd} = R{rs}({self.regs[rs]}) + {op2} + C{self.flag_c} = {result}")
             self.update_flags(result,"adc",self.regs[rs], op2, self.flag_c)
             self.write_register(rd, result)
             self.pc += instr_len
@@ -159,11 +160,11 @@ class Processor:
 
         elif opcode == 0x03:
             if mode not in [0, 1]:
-                print(f"[Такт {self.cycles}] EXECUTE: mul поддерживает только MODE 0, 1")
+                self.log(f"[Такт {self.cycles}] EXECUTE: mul поддерживает только MODE 0, 1")
                 return False
             op2 = self.get_operand_value(mode, rt)
             result = (self.regs[rs] * op2) & 0xFFFFFFFF
-            print(f"[Такт {self.cycles}] EXECUTE: mul R{rd} = R{rs} * {op2} = {result}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: mul R{rd} = R{rs} * {op2} = {result}")
             self.update_flags(result, "logic", self.regs[rs], op2)
             self.write_register(rd, result)
             self.pc += instr_len
@@ -172,18 +173,18 @@ class Processor:
         
         elif opcode == 0x04:  
             if mode not in [0, 1]:
-                print(f"[Такт {self.cycles}] EXECUTE: div поддерживает только MODE 0, 1")
+                self.log(f"[Такт {self.cycles}] EXECUTE: div поддерживает только MODE 0, 1")
                 return False
             op2 = self.get_operand_value(mode, rt)
             if op2 == 0:
-                print(f"[Такт {self.cycles}] EXECUTE: Division by zero!")
+                self.log(f"[Такт {self.cycles}] EXECUTE: Division by zero!")
                 return False
             a = self.regs[rs]
             if a > 0x7FFFFFFF: a -= 0x100000000
             if op2 > 0x7FFFFFFF: op2 -= 0x100000000
             res = a // op2
             result = res & 0xFFFFFFFF
-            print(f"[Такт {self.cycles}] EXECUTE: div R{rd} = R{rs} // {op2} = {result}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: div R{rd} = R{rs} // {op2} = {result}")
             self.update_flags(result, "logic", self.regs[rs], op2)
             self.write_register(rd, result)
             self.pc += instr_len
@@ -192,18 +193,18 @@ class Processor:
 
         elif opcode == 0x05:  
             if mode not in [0, 1]:
-                print(f"[Такт {self.cycles}] EXECUTE: mod поддерживает только MODE 0, 1")
+                self.log(f"[Такт {self.cycles}] EXECUTE: mod поддерживает только MODE 0, 1")
                 return False
             op2 = self.get_operand_value(mode, rt)
             if op2 == 0:
-                print(f"[Такт {self.cycles}] EXECUTE: Division by zero!")
+                self.log(f"[Такт {self.cycles}] EXECUTE: Division by zero!")
                 return False
             a = self.regs[rs]
             if a > 0x7FFFFFFF: a -= 0x100000000
             if op2 > 0x7FFFFFFF: op2 -= 0x100000000
             res = a % op2
             result = res & 0xFFFFFFFF
-            print(f"[Такт {self.cycles}] EXECUTE: mod R{rd} = R{rs} // {op2} = {result}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: mod R{rd} = R{rs} // {op2} = {result}")
             self.update_flags(result, "logic", self.regs[rs], op2)
             self.write_register(rd, result)
             self.pc += instr_len
@@ -217,7 +218,7 @@ class Processor:
                 addr = self.get_address(mode, rs, rt)
                 op2 =self.memory.read_word(addr)
             result = self.regs[rs] & op2
-            print(f"[Такт {self.cycles}] EXECUTE: and R{rd} = R{rs}({self.regs[rs]}) & {op2} = {result}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: and R{rd} = R{rs}({self.regs[rs]}) & {op2} = {result}")
             self.update_flags(result, "and", self.regs[rs], op2)
             self.write_register(rd, result)
             self.pc += instr_len
@@ -231,7 +232,7 @@ class Processor:
                 addr = self.get_address(mode, rs, rt)
                 op2 =self.memory.read_word(addr)
             result = self.regs[rs] | op2
-            print(f"[Такт {self.cycles}] EXECUTE: or R{rd} = R{rs}({self.regs[rs]}) | {op2} = {result}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: or R{rd} = R{rs}({self.regs[rs]}) | {op2} = {result}")
             self.update_flags(result, "or", self.regs[rs], op2)
             self.write_register(rd, result)
             self.pc += instr_len
@@ -240,14 +241,14 @@ class Processor:
         
         elif opcode == 0x08: 
             if mode != 1:
-                print(f"[Такт {self.cycles}] EXECUTE: lsl поддерживает только MODE 1")
+                self.log(f"[Такт {self.cycles}] EXECUTE: lsl поддерживает только MODE 1")
                 return False
             op2 = self.get_operand_value(mode, rt)
             if op2<0:
-                print(f"[Такт {self.cycles}] EXECUTE: lsl поддерживает только положительные сдвиги")
+                self.log(f"[Такт {self.cycles}] EXECUTE: lsl поддерживает только положительные сдвиги")
                 return False
             result = (self.regs[rs] << op2) & 0xFFFFFFFF
-            print(f"[Такт {self.cycles}] EXECUTE: lsl R{rd} = R{rs} << {op2} = {result}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: lsl R{rd} = R{rs} << {op2} = {result}")
             self.update_flags(result, "logic", self.regs[rs], op2)
             self.write_register(rd, result)
             self.pc += instr_len
@@ -256,14 +257,14 @@ class Processor:
 
         elif opcode == 0x09: 
             if mode != 1:
-                print(f"[Такт {self.cycles}] EXECUTE: lsr поддерживает только MODE 1")
+                self.log(f"[Такт {self.cycles}] EXECUTE: lsr поддерживает только MODE 1")
                 return False
             op2 = self.get_operand_value(mode, rt)
             if op2<0:
-                print(f"[Такт {self.cycles}] EXECUTE: lsr поддерживает только положительные сдвиги")
+                self.log(f"[Такт {self.cycles}] EXECUTE: lsr поддерживает только положительные сдвиги")
                 return False
             result = (self.regs[rs] >> op2) & 0xFFFFFFFF
-            print(f"[Такт {self.cycles}] EXECUTE: lsr R{rd} = R{rs} >> {op2} = {result}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: lsr R{rd} = R{rs} >> {op2} = {result}")
             self.update_flags(result, "logic", self.regs[rs], op2)
             self.write_register(rd, result)
             self.pc += instr_len
@@ -271,14 +272,14 @@ class Processor:
             return True
         
         elif opcode == 0x10:  
-            if mode == 0:
+            if mode in [0,1,2]:
                 op2 = self.get_operand_value(mode, rt)
-                print(f"[Такт {self.cycles}] EXECUTE: load (mov) R{rd} = R{rt}({op2})")
+                self.log(f"[Такт {self.cycles}] EXECUTE: load (mov) R{rd} = R{rt}({op2})")
                 self.write_register(rd, op2)
             else:
                 addr = self.get_address(mode, rs, rt)
                 op2 =self.memory.read_word(addr)
-                print(f"[Такт {self.cycles}] EXECUTE: load R{rd} = [{addr:04X}] = {op2}")
+                self.log(f"[Такт {self.cycles}] EXECUTE: load R{rd} = [{addr:04X}] = {op2}")
                 self.write_register(rd, op2)
             self.pc += instr_len
             self.dump_state()
@@ -288,7 +289,7 @@ class Processor:
             addr = self.get_address(mode, rs, rt)
             value = self.regs[rd]
             self.memory.write_word(addr, value)
-            print(f"[Такт {self.cycles}] EXECUTE: store R{rd} {addr}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: store R{rd} {addr}")
             self.pc += instr_len
             self.dump_state()
             return True
@@ -296,7 +297,7 @@ class Processor:
         elif opcode==0x12:
             addr = self.get_address(mode, rs, rt)
             op2 =self.memory.read_byte(addr)
-            print(f"[Такт {self.cycles}] EXECUTE: load_byte R{rd} {op2}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: load_byte R{rd} {op2}")
             self.write_register(rd, op2)
             self.pc += instr_len
             self.dump_state()
@@ -306,7 +307,7 @@ class Processor:
             addr = self.get_address(mode, rs, rt)
             value = self.regs[rd]
             self.memory.write_byte(addr, value)
-            print(f"[Такт {self.cycles}] EXECUTE: store_byte R{rd} {addr}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: store_byte R{rd} {addr}")
             self.pc += instr_len
             self.dump_state()
             return True
@@ -319,7 +320,7 @@ class Processor:
                 op2 =self.memory.read_word(addr)
             a = self.regs[rs]
             result = a - op2
-            print(f"[Такт {self.cycles}] EXECUTE: CMP R{rs}({a}) - {op2} = {result}")
+            self.log(f"[Такт {self.cycles}] EXECUTE: CMP R{rs}({a}) - {op2} = {result}")
             self.update_flags(result,'cmp', a, op2)
             self.pc += instr_len
             self.dump_state()
@@ -338,37 +339,41 @@ class Processor:
             elif opcode == 0x34:  #jgt если Z==0 и N == V
                 jump = (self.flag_z == 0) and (self.flag_n == self.flag_v)
             if jump:
-                print(f"[Такт {self.cycles}] EXECUTE: jump to 0x{addr:04X}")
+                self.log(f"[Такт {self.cycles}] EXECUTE: jump to 0x{addr:04X}")
                 self.pc = addr
             else:
-                print(f"[Такт {self.cycles}] EXECUTE: no jump, continue to 0x{self.pc + instr_len:04X}")
+                self.log(f"[Такт {self.cycles}] EXECUTE: no jump, continue to 0x{self.pc + instr_len:04X}")
                 self.pc += instr_len
             self.dump_state()
             return True
     
         elif opcode == 0x40:  
             self.ie = 1
-            print(f"[Такт {self.cycles}] EXECUTE: int_enable (прерывания разрешены)")
+            self.log(f"[Такт {self.cycles}] EXECUTE: int_enable (прерывания разрешены)")
             self.pc += instr_len
             self.dump_state()
             return True
 
         elif opcode == 0x41: 
             self.ie = 0
-            print(f"[Такт {self.cycles}] EXECUTE: int_disable (прерывания запрещены)")
+            self.log(f"[Такт {self.cycles}] EXECUTE: int_disable (прерывания запрещены)")
             self.pc += instr_len
             self.dump_state()
             return True
         
         elif opcode == 0x42: 
-            print(f"[Такт {self.cycles}] EXECUTE: reti (возврат на 0x{self.epc:04X})")
+            self.log(f"[Такт {self.cycles}] EXECUTE: reti (возврат на 0x{self.epc:04X})")
             self.pc = self.epc
-            self.ie = 1         
+            self.ie = 1   
+            self.in_interrupt = False      
             self.dump_state()
             return True
-
+        
+        elif opcode == 0x43:
+            self.log(f"[Такт {self.cycles}] EXECUTE: halt - остановка процессора")
+            return False
         else:
-            print(f"[Такт {self.cycles}] EXECUTE: команда с опкодом 0x{opcode:02X} пока не реализована")
+            self.log(f"[Такт {self.cycles}] EXECUTE: команда с опкодом 0x{opcode:02X} пока не реализована")
             return False
     
 
@@ -383,14 +388,13 @@ class Processor:
 
     def write_register(self, rd, result):
         if rd == 15:
-            print(f"[Такт {self.cycles}] WRITEBACK: попытка записи в R_INT запрещена")
+            self.log(f"[Такт {self.cycles}] WRITEBACK: попытка записи в R_INT запрещена")
         elif rd < 8:
-            # Маскируем до 32 бит (беззнаковое представление)
             result_32 = result & 0xFFFFFFFF
             self.regs[rd] = result_32
-            print(f"[Такт {self.cycles}] WRITEBACK: R{rd} = {result_32}")
+            self.log(f"[Такт {self.cycles}] WRITEBACK: R{rd} = {result_32}")
         else:
-            print(f"[Такт {self.cycles}] WRITEBACK: регистр {rd} зарезервирован")
+            self.log(f"[Такт {self.cycles}] WRITEBACK: регистр {rd} зарезервирован")
 
     def update_flags(self, result, operation=None, a=None, b=None, carry = 0):
         result_32 = result & 0xFFFFFFFF
@@ -423,12 +427,16 @@ class Processor:
             
 
     def check_interrupt(self):
+        if self.in_interrupt:
+            if len(self.input_schedule) > 0 and self.cycles >= self.input_schedule[0][0]:
+                self.log(f"[Такт {self.cycles}] Прерывание в прерывании")
+            return False
         if self.ie == 1 and len(self.input_schedule) > 0:
             if self.cycles >= self.input_schedule[0][0]:
                 tick, value = self.input_schedule.pop(0)
-                print(f"[Такт {self.cycles}] - прерывание (trap)")
-                print(f"Сохраняем PC=0x{self.pc:04X} в EPC")
-                print(f"Записываем значение {value} в R_INT")
+                self.log(f"[Такт {self.cycles}] - прерывание (trap)")
+                self.log(f"Сохраняем PC=0x{self.pc:04X} в EPC")
+                self.log(f"Записываем значение {value} в R_INT")
                 self.epc = self.pc
                 self.r_int = value
                 self.ie = 0 
@@ -471,7 +479,6 @@ class Processor:
             return ((self.ir[4] << 8) | self.ir[3])  + self.regs[rt]
 
     def log(self, message):
-        print(message)
         self.log_file.write(message + "\n")
 
     def dump_state(self):
@@ -479,6 +486,7 @@ class Processor:
         flags_str = f"z={self.flag_z} n={self.flag_n} c={self.flag_c} v={self.flag_v}"
         ie_str = f"IE={self.ie}"
         self.log(f"[state] {regs_str} | flags: {flags_str} | {ie_str}")
+
     def close(self):
         self.log("~" * 60)
         self.log("The end.")
@@ -496,40 +504,30 @@ class Processor:
             
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print("ТЕСТ 6: РАБОТА КЭША (ПРОСТРАНСТВЕННАЯ ЛОКАЛЬНОСТЬ)")
-    print("=" * 60)
-    
-    cpu = Processor()
-    
-    # Программа:
-    # 0x0100: load r0, [0x3000]  (читаем 4 байта из памяти)
-    cpu.memory.data[0x0100] = 0x10
-    cpu.memory.data[0x0101] = 0x00
-    cpu.memory.data[0x0102] = 0x30
-    cpu.memory.data[0x0103] = 0x00
-    cpu.memory.data[0x0104] = 0x30
-    
-    # 0x0105: load r1, [0x3000]  (читаем ТЕ ЖЕ 4 байта второй раз!)
-    cpu.memory.data[0x0105] = 0x10
-    cpu.memory.data[0x0106] = 0x10
-    cpu.memory.data[0x0107] = 0x30
-    cpu.memory.data[0x0108] = 0x00
-    cpu.memory.data[0x0109] = 0x30
-    
-    # 0x010A: halt
-    cpu.memory.data[0x010A] = 0x43
-    
-    # Тестовые данные в памяти
-    cpu.memory.data[0x3000] = 0xAA
-    cpu.memory.data[0x3001] = 0xBB
-    cpu.memory.data[0x3002] = 0xCC
-    cpu.memory.data[0x3003] = 0xDD
-    
-    cpu.run()
-    
-    print(f"\nПРОВЕРКА:")
-    print(f"  R0 = {cpu.regs[0]:08X} (ожидалось DDCCBBAA)")
-    print(f"  R1 = {cpu.regs[1]:08X} (ожидалось DDCCBBAA)")
+    if len(sys.argv) > 1:
+        bin_file = sys.argv[1]
+    else:
+        bin_file = "program.bin"
+    cpu = Processor(log_filename="simulator.log")
+    try:
+        cpu.load_program(bin_file, base_addr=0x0000)
+    except FileNotFoundError:
+        print(f"Ошибка: файл {bin_file} не найден. Сначала запусти транслятор и ассемблер!")
+        sys.exit(1)
+    except ValueError as e:
+        print(f"Ошибка: {e}")
+        sys.exit(1)
 
-    
+    cpu.input_schedule = [(10, 65)]
+    print("Выполнение программы...")
+    cpu.run()
+    print("\n" + "=" * 60)
+    print("РЕЗУЛЬТАТЫ:")
+    print(f"Всего тактов: {cpu.cycles}")
+    print(f"Кэш: HIT={cpu.memory.hits}, MISS={cpu.memory.misses}")
+    if cpu.output_buffer:
+        print(f"Вывод программы: '{''.join(cpu.output_buffer)}'")
+    else:
+        print("Вывод программы: (пусто)")
+    print("=" * 60)
+    print("Подробный журнал сохранен в simulator.log")
