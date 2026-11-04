@@ -1,81 +1,27 @@
 Program
   Interrupt
     Program
-      LetDecl(s)
-        ReadByte
-          Number(0x80)
-      PrintByte
-        Variable(s)
-        BinOp(+)
-          Number(0x4000)
-          Variable(count)
-      Assign(count)
-        BinOp(+)
-          Variable(count)
-          Number(1)
-  LetDecl(digit)
-    ReadWord
-      Number(0x4000)
-  IfStmt
+  LetDecl(msg)
+    String('hello world')
+  LetDecl(i)
+    Number(0)
+  WhileStmt
     Compare(<)
-      Variable(digit)
-      Number(1)
+      Variable(i)
+      Number(11)
     Body:
       Program
-        PrintWord
-          Number(-1)
+        LetDecl(addr)
+          BinOp(+)
+            Number(0x3005)
+            Variable(i)
+        LetDecl(char)
+          ReadByte
+            Variable(addr)
+        PrintByte
+          Variable(char)
           Number(0x84)
-    ElseBody:
-      Program
-        IfStmt
-          Compare(==)
-            Variable(digit)
+        Assign(i)
+          BinOp(+)
+            Variable(i)
             Number(1)
-          Body:
-            Program
-              PrintWord
-                Number(0)
-                Number(0x84)
-          ElseBody:
-            Program
-              LetDecl(flag)
-                Number(0)
-              LetDecl(i)
-                Number(2)
-              WhileStmt
-                Compare(<=)
-                  BinOp(*)
-                    Variable(i)
-                    Variable(i)
-                  Variable(digit)
-                Body:
-                  Program
-                    IfStmt
-                      Compare(==)
-                        BinOp(%)
-                          Variable(digit)
-                          Variable(i)
-                        Number(0)
-                      Body:
-                        Program
-                          Assign(flag)
-                            Number(1)
-                          Break
-                    Assign(i)
-                      BinOp(+)
-                        Variable(i)
-                        Number(1)
-              IfStmt
-                Compare(==)
-                  Variable(flag)
-                  Number(1)
-                Body:
-                  Program
-                    PrintWord
-                      Number(0)
-                      Number(0x84)
-                ElseBody:
-                  Program
-                    PrintWord
-                      Number(1)
-                      Number(0x84)

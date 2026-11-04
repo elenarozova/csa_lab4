@@ -4,19 +4,20 @@ interrupt {
     print_byte(s, 0x4000 + count)
     count = count+1
 }
-
+count = 0
 let len = read_byte(0x4000)
 let i = 1
 len = len + 1
 let arg = 0x4000 + len 
-while(i <= len){
+while(i < len){
     let addr = 0x4000 + i
     let letter = read_byte(addr)
     if (letter == 37){
         i = i + 1
+        addr = 0x4000 + i
         if (i<= len){
-            letter = read_byte(addr)
-            if (letter == 100){
+            let nletter = read_byte(addr)
+            if (nletter == 100){
                 let num = read_word(arg)
                 arg = arg+4
                 if (num<0){

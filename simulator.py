@@ -40,6 +40,11 @@ class Memory:
     def write_byte(self, address, value):
         self.processor.cycles += 1
         self.data[address] = value & 0xFF
+        offer = address % self.cache_block_size
+        set_idx = (address // self.cache_block_size) % self.cache_lines
+        tag = (address // self.cache_block_size) // self.cache_lines
+        if self.cache_valid[set_idx] and self.cache_tags[set_idx] == tag:
+            self.cache_data[set_idx][offer] = value & 0xFF
         if address == 0x84:  
             self.processor.output_buffer.append(chr(value  & 0xFF))
             self.processor.log(f"[Такт {self.processor.cycles}] ВЫВОД: символ '{chr(value & 0xFF )}' (ASCII {value & 0xFF })")
@@ -381,10 +386,13 @@ class Processor:
     
     def run(self):
         self.log("Процессор запущен")
+        limit = 50000
         while self.step():
-            pass
+            if self.cycles > limit:
+                self.log(f"ЛИМИТ {limit} тактов превышен — остановка")
+                break
         self.log(f"Stop. Всего тактов: {self.cycles}")
-        self.close() 
+        self.close()
 
     def write_register(self, rd, result):
         if rd == 15:
@@ -518,7 +526,9 @@ if __name__ == "__main__":
         print(f"Ошибка: {e}")
         sys.exit(1)
 
-    cpu.input_schedule = [(1, 65)]
+    #input_data = [5, 65, 61, 37, 100, 10, 42, 0, 0, 0]
+    #cpu.input_schedule = [(11 + i, b) for i, b in enumerate(input_data)]
+    cpu.input_schedule = []
     print("Выполнение программы...")
     cpu.run()
     print("\n" + "=" * 60)
@@ -529,5 +539,7 @@ if __name__ == "__main__":
         print(f"Вывод программы: '{''.join(cpu.output_buffer)}'")
     else:
         print("Вывод программы: (пусто)")
+    codes = [ord(c) for c in cpu.output_buffer]
+    print(f"Вывод (коды байтов): {codes}")
     print("=" * 60)
     print("Подробный журнал сохранен в simulator.log")

@@ -210,10 +210,8 @@ def calculate_length(mnemonic, raw):
 def encode_instruction(instr, labels):
     mnemonic = instr.mnemonic
     oper = instr.operands
-    
     if mnemonic in ['halt', 'reti', 'int_enable', 'int_disable']:
         return [OPCODES[mnemonic]]
-    
     if mnemonic in ['jmp', 'jeq', 'jne', 'jlt', 'jgt']:
         if len(oper) >= 1:
             mode, addr = parse_oper(oper[0].rstrip(','), labels)
@@ -221,19 +219,15 @@ def encode_instruction(instr, labels):
             bytes_list.append(addr & 0xFF)
             bytes_list.append((addr >> 8) & 0xFF)
             return bytes_list
-    
     bytes_list = [OPCODES[mnemonic]]
     parsed_op = []
     for op_str in oper:
         mode, value = parse_oper(op_str.rstrip(','), labels)
         parsed_op.append((mode, value))
-    
-    # Двухоперандные инструкции
     if mnemonic in ['load', 'store', 'load_byte', 'store_byte', 'cmp']:
         if len(parsed_op) == 2:
             op1_mode, op1_val = parsed_op[0]
             op2_mode, op2_val = parsed_op[1]
-            
             if mnemonic in ['load', 'load_byte']:
                 rd = op1_val
                 if op2_mode in [4, 5]:
@@ -245,11 +239,8 @@ def encode_instruction(instr, labels):
                     byte2 = (op2_mode << 4) | op2_val
                 else:
                     byte2 = (op2_mode << 4) | 0
-                    
                 bytes_list.append(byte1)
                 bytes_list.append(byte2)
-                
-                # Добавляем байты для ВТОРОГО операнда (адрес/константа)
                 if op2_mode == 1:
                     bytes_list.append(op2_val & 0xFF)
                 elif op2_mode in [2, 3]:
@@ -259,7 +250,6 @@ def encode_instruction(instr, labels):
                     addr = op2_val & 0xFFFF
                     bytes_list.append(addr & 0xFF)
                     bytes_list.append((addr >> 8) & 0xFF)
-                    
             elif mnemonic in ['store', 'store_byte']:
                 rd = op2_val
                 if op1_mode in [4, 5]:
@@ -267,54 +257,41 @@ def encode_instruction(instr, labels):
                 else:
                     rs = 0
                 byte1 = (rd << 4) | rs
-                
-                # Для MODE 6 индексный регистр в Rt
                 if op1_mode == 6:
                     reg = (op1_val >> 16) & 0xF
                     byte2 = (op1_mode << 4) | reg
                 else:
                     byte2 = (op1_mode << 4) | 0
-                    
                 bytes_list.append(byte1)
                 bytes_list.append(byte2)
-                
-                # Добавляем байты для ПЕРВОГО операнда (адрес)
                 if op1_mode == 1:
                     bytes_list.append(op1_val & 0xFF)
                 elif op1_mode in [2, 3]:
                     bytes_list.append(op1_val & 0xFF)
                     bytes_list.append((op1_val >> 8) & 0xFF)
-                elif op1_mode == 6:  # <-- ИСПРАВЛЕНО: op1_mode, а не op2_mode!
+                elif op1_mode == 6: 
                     addr = op1_val & 0xFFFF
                     bytes_list.append(addr & 0xFF)
                     bytes_list.append((addr >> 8) & 0xFF)
-                    
             elif mnemonic == 'cmp':
-                # cmp Rs, operand
                 rs = op1_val
                 byte1 = (0 << 4) | rs
                 byte2 = (op2_mode << 4) | op2_val
                 bytes_list.append(byte1)
                 bytes_list.append(byte2)
-                
                 if op2_mode == 1:
                     bytes_list.append(op2_val & 0xFF)
                 elif op2_mode in [2, 3]:
                     bytes_list.append(op2_val & 0xFF)
                     bytes_list.append((op2_val >> 8) & 0xFF)
-                    
         return bytes_list
-    
-    # Трёхоперандные инструкции
     if len(parsed_op) >= 3:
         rd = parsed_op[0][1]
         rs = parsed_op[1][1]
         mode = parsed_op[2][0]
         val = parsed_op[2][1]
-        
         byte1 = (rd << 4) | rs
         bytes_list.append(byte1)
-        
         if mode == 0:
             byte2 = (mode << 4) | val
             bytes_list.append(byte2)
@@ -345,7 +322,6 @@ def encode_instruction(instr, labels):
             bytes_list.append(byte2)
             bytes_list.append(addr & 0xFF)
             bytes_list.append((addr >> 8) & 0xFF)
-            
     return bytes_list
     
 

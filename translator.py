@@ -55,7 +55,8 @@ def translate(input_file, output_file):
                 program_ast.statements.insert(0, int_node)
                 continue
             
-            if line.startswith('}'): 
+            if line.startswith('}'):
+                if (flag_for_if != 0): do_decide(line)  
                 end_op()
                 line = line.replace('}', '').strip()
                 if not line:
@@ -103,15 +104,17 @@ def do_let(line):
     if(do_if_math(value_part, "r0") == 0):
         load_operand(value_part, "r0")
        
-    printl(f"store [{symbol_table[var_name]:04X}], r0")
+    printl(f"store [0x{symbol_table[var_name]:04X}], r0")
 
 def put_pstr(text, current_addr):
     lenght = len(text)
-    printl(f"store_byte [{current_addr:04X}], #{lenght}")
+    printl(f"load r0, #{lenght}")
+    printl(f"store_byte [0x{current_addr:04X}], r0")
     for i in range(0, len(text)):
         addr = current_addr+i+1
         ascii_n = ord(text[i])
-        printl(f"store_byte [{addr:04X}], #{ascii_n}")
+        printl(f"load r0, #{ascii_n}")
+        printl(f"store_byte [0x{addr:04X}], r0")
     return current_addr+lenght+1
 
 def load_operand(value, register):
@@ -131,7 +134,7 @@ def load_operand(value, register):
     elif (value.lstrip('-').isdigit() or value.startswith('0x')):
         printl(f"load {register}, #{value}")
     else:
-        printl(f"load {register}, [{symbol_table[value]:04X}]")
+        printl(f"load {register}, [0x{symbol_table[value]:04X}]")
 
 def do_if_math(line, reg = "r0"):
     oper = None
@@ -217,7 +220,7 @@ def do_if(line):
     if_stmt = IfStmt(condition_ast, None)
     add_to_current_context(if_stmt)
     context_stack.append(if_body)
-    check_condition(condition, f"end_if_{if_counter}")
+    check_condition(condition, f"else_{if_counter}")
     
     block.append(["if", if_counter, if_stmt])
     if_counter+=1
@@ -272,7 +275,7 @@ def do_print(line):
         base = parts[0].strip()      
         var_name = parts[1].strip()  
         var_addr = symbol_table[var_name]
-        printl(f"load r1, [{var_addr:04X}]")
+        printl(f"load r1, [0x{var_addr:04X}]")
         if "print_byte" in line:
             printl(f"store_byte [{base}+r1], r0")
         else:
@@ -284,7 +287,7 @@ def do_print(line):
             else:
                 printl(f"store [{port}], r0")
         else:
-            printl(f"load r1, [{symbol_table[port]:04X}]")
+            printl(f"load r1, [0x{symbol_table[port]:04X}]")
             if "print_byte" in line:
                 printl(f"store_byte [r1], r0")             
             else:
@@ -301,13 +304,15 @@ def do_change_value(line):
     add_to_current_context(assign_node)
     if (do_if_math(value_part, "r0") == 0):
         load_operand(value_part, "r0")
-    printl(f"store [{addr:04X}], r0")
+    printl(f"store [0x{addr:04X}], r0")
 
 def do_decide(line):
     global flag_for_if
     if (line.startswith('else')):
         do_else()
     else:
+        num = flag_for_if.split("_")[2]
+        printl(f"else_{num}:")
         printl(f"{flag_for_if}:")  
     flag_for_if = 0
 
@@ -348,7 +353,7 @@ def check_condition(condition, label):
             oper = i.strip()
             do_condition(oper, label, jump_if_false=True)
     elif (" or " in condition):
-        body_label = label.replace("end_", "body_")
+        body_label = label.replace("else_", "body_")
         operands = condition.split(" or ")
         for part in operands:
             do_condition(part.strip(), body_label, jump_if_false=False)

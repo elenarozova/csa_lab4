@@ -1,0 +1,10 @@
+interrupt {
+}
+let msg = "hello world"
+let i = 0
+while (i < 11) {
+    let addr = 0x3005 + i
+    let char = read_byte(addr)
+    print_byte(char, 0x84)
+    i = i + 1
+}
