@@ -1,0 +1,24 @@
+name: hello
+description: напечатать "hello world"
+source_code: |
+  interrupt {
+  }
+  let msg = "hello world"
+  let i = 0
+  while (i < 11) {
+      let addr = 0x3005 + i
+      let char = read_byte(addr)
+      print_byte(char, 0x84)
+      i = i + 1
+  }
+input_schedule: []
+output: "hello world"
+output_codes: [104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100]
+cycles_total: 3740
+cache_hits: 981
+cache_misses: 260
+log_fragment: |
+  [Такт 10] EXECUTE: int_enable (прерывания разрешены)
+  [Такт 678] ВЫВОД: символ 'h' (ASCII 104)
+  [Такт 3581] ВЫВОД: символ 'd' (ASCII 100)
+  [Такт 3740] EXECUTE: halt - остановка процессора

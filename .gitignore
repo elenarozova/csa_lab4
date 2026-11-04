@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+*.bin
+*.log
+*.lst
+*.asm
+simulator.log
+program_ast.txt
+
+.mypy_cache/
+.ruff_cache/
+
+.DS_Store
