@@ -1,0 +1,31 @@
+name: cat_hi
+description: "Проверка hi"
+source_code: |
+  interrupt {
+    let s = read_byte(0x80)
+    print_byte(s, 0x4000 + count)
+    count = count+1
+  }
+  let len = read_byte(0x4000)
+  let i = 0
+  let addr = 0x4000
+  while (i<len){
+      addr = addr + 1
+      let letter = read_byte(addr)
+      print_byte(letter, 0x84)
+      i = i+1
+  }
+
+input_schedule: 
+  - [10, 2]
+  - [11, 104]
+  - [12, 105]
+output_codes: [104, 105]
+cycles_total: 1808
+cache_hits: 475
+cache_misses: 122
+log_fragment: |
+  [Такт 10] - прерывание (trap)
+  Сохраняем PC=0x0101 в EPC
+  Записываем значение 2 в R_INT
+  [Такт 1808] EXECUTE: halt - остановка процессора

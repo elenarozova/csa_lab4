@@ -1,0 +1,14 @@
+interrupt {
+    let s = read_byte(0x80)
+    print_byte(s, 0x4000 + count)
+    count = count + 1
+}
+let len = read_byte(0x4000)
+let addr = 0x4000
+let i = 0
+while (i < len) {
+    addr = addr + 1
+    let letter = read_byte(addr)
+    print_byte(letter, 0x84)
+    i = i + 1
+}
