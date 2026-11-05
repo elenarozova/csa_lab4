@@ -5,9 +5,10 @@ import sys
 import yaml
 
 
-def run_com(cmd:str) -> tuple[bool, str, str]:
+def run_com(cmd: str) -> tuple[bool, str, str]:
     res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     return res.returncode == 0, res.stdout, res.stderr
+
 
 def run_test(test_file) -> bool:
     with open(test_file, encoding="utf-8") as f:
@@ -64,6 +65,7 @@ def run_test(test_file) -> bool:
             print(f"  Такты сильно отличаются: {actual_cycles} / {expected_cycles}")
     return success
 
+
 def main():
     if not os.path.exists("golden_tests"):
         print("Папка golden_tests не найдена")
@@ -92,6 +94,7 @@ def main():
     else:
         print("Есть плохие тесты")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
