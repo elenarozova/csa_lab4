@@ -1,0 +1,26 @@
+interrupt {
+    let s = read_byte(0x80)
+    print_byte(s, 0x4000 + count)
+    count = count+1
+}
+
+let msg = "What is your name? Hello, "
+let i = 0
+let char = 0
+let addr = 0x3007 + 1
+while (i < 26) {
+    addr = addr+1
+    char = read_byte(addr)
+    print_byte(char, 0x84)
+    i = i + 1
+}
+i = 0
+addr = 0x4000
+let len = read_byte(0x4000)
+while (i<len){
+    addr = addr + 1
+    let letter = read_byte(addr)
+    print_byte(letter, 0x84)
+    i = i+1
+}
+print_byte(33, 0x84)

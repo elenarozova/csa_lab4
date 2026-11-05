@@ -110,8 +110,13 @@ def do_let(line):
     var_part = parts[0].strip()
     value_part = parts[1].strip()
     var_name = var_part.replace("let ", "").strip()
-    current_addr = var_addr
-    symbol_table[var_name] = current_addr
+
+    if var_name in symbol_table:
+        current_addr = symbol_table[var_name]
+    else:
+        current_addr = var_addr
+        symbol_table[var_name] = current_addr
+        var_addr = var_addr + 4
     if value_part.startswith('"') and value_part.endswith('"'):
         text = value_part[1:-1]
         string_node = String(text)
@@ -119,7 +124,6 @@ def do_let(line):
         add_to_current_context(let_node)
         var_addr = put_pstr(text, current_addr)
         return
-    var_addr = var_addr + 4
     value_node = parse_expression(value_part, symbol_table)
     let_node = LetDecl(var_name, value_node)
     add_to_current_context(let_node)

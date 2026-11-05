@@ -1,0 +1,46 @@
+name: hello_Alice
+description: "Проверка Alice"
+source_code: |
+  interrupt {
+    let s = read_byte(0x80)
+    print_byte(s, 0x4000 + count)
+    count = count+1
+  }
+
+  let msg = "What is your name? Hello, "
+  let i = 0
+  let char = 0
+  let addr = 0x3007 + 1
+  while (i < 26) {
+      addr = addr+1
+      char = read_byte(addr)
+      print_byte(char, 0x84)
+      i = i + 1
+  }
+  i = 0
+  addr = 0x4000
+  let len = read_byte(0x4000)
+  while (i<len){
+      addr = addr + 1
+      let letter = read_byte(addr)
+      print_byte(letter, 0x84)
+      i = i+1
+  }
+  print_byte(33, 0x84)
+
+input_schedule: 
+  - [10, 5]
+  - [11, 65]
+  - [12, 108]
+  - [13, 105]
+  - [14, 99]
+  - [15, 101]
+output_codes: [87, 104, 97, 116, 32, 105, 115, 32, 121, 111, 117, 114, 32, 110, 97, 109, 101, 63, 32, 72, 101, 108, 108, 111, 44, 32, 65, 108, 105, 99, 101, 33]
+cycles_total: 12788
+cache_hits: 3223
+cache_misses: 896
+log_fragment: |
+  [Такт 10] - прерывание (trap)
+  Сохраняем PC=0x0101 в EPC
+  Записываем значение 5 в R_INT
+  [Такт 12788] EXECUTE: halt - остановка процессора
