@@ -20,12 +20,12 @@ symbol_table = {"count": 0x3000}
 var_addr = 0x3004
 if_counter = 0
 while_counter = 0
-block = []
+block: list[str] = []
 current_if_label = ""
 current_if_stmt = None
 flag_for_if = 0
 in_interrupt = False
-output_lines = []
+output_lines: list[str] = []
 program_ast = Program()
 context_stack = [program_ast]
 
