@@ -1,0 +1,31 @@
+interrupt {
+  let s = read_byte(0x80)
+  print_byte(s, 0x4000 + count)
+  count = count+1
+}
+let digit = read_word(0x4000)
+if (digit<1){
+    print_word(-1, 0x84)
+}
+else {
+    if (digit == 1){
+        print_word(0, 0x84)
+    }
+    else {
+        let flag = 0
+        let i = 2
+        while(i*i<= digit){
+            if(digit%i == 0){
+                flag = 1
+                break
+            }
+            i = i + 1
+        }
+        if (flag == 1){
+            print_word(0, 0x84)
+        }
+        else {
+            print_word(1, 0x84)
+        }
+    }
+}

@@ -1,0 +1,47 @@
+name: is_prime_65
+description: "Проверка числа 65"
+source_code: |
+  interrupt {
+    let s = read_byte(0x80)
+    print_byte(s, 0x4000 + count)
+    count = count+1
+  }
+  let digit = read_word(0x4000)
+  if (digit<1){
+      print_word(-1, 0x84)
+  }
+  else {
+      if (digit == 1){
+          print_word(0, 0x84)
+      }
+      else {
+          let flag = 0
+          let i = 2
+          while(i*i<= digit){
+              if(digit%i == 0){
+                  flag = 1
+                  break
+              }
+              i = i + 1
+          }
+          if (flag == 1){
+              print_word(0, 0x84)
+          }
+          else {
+              print_word(1, 0x84)
+          }
+      }
+  }
+
+input_schedule: 
+  - [10, 65]
+output_codes: [0]
+cycles_total: 1506
+cache_hits: 469
+cache_misses: 98
+log_fragment: |
+  [Такт 10] - прерывание (trap)
+  Сохраняем PC=0x0101 в EPC
+  Записываем значение 65 в R_INT
+  [Такт 1481] ВЫВОД: символ (ASCII 0)
+  [Такт 1506] EXECUTE: halt - остановка процессора

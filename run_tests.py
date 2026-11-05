@@ -14,8 +14,8 @@ def run_test(test_file) -> bool:
     with open(test_file, encoding="utf-8") as f:
         test = yaml.safe_load(f)
     name = test["name"]
-    print(f" Тест: {name}")
-    print(f" Описание: {test.get('description', 'нет описания')}")
+    print(f"\nТест: {name}")
+    print(f"Описание: {test.get('description', 'нет описания')}")
     source_file = f"golden_tests/{name}.kot"
     with open(source_file, "w", encoding="utf-8") as f:
         f.write(test["source_code"])
@@ -60,9 +60,9 @@ def run_test(test_file) -> bool:
     if expected_cycles and actual_cycles:
         diff = abs(actual_cycles - expected_cycles)
         if diff <= expected_cycles * 0.1:
-            print(f"  Такты в пределах нормы: {actual_cycles} (ожидалось примерно {expected_cycles})")
+            print(f"Такты в пределах нормы: {actual_cycles} (ожидалось примерно {expected_cycles})")
         else:
-            print(f"  Такты сильно отличаются: {actual_cycles} / {expected_cycles}")
+            print(f"Такты сильно отличаются: {actual_cycles} / {expected_cycles}")
     return success
 
 
@@ -79,7 +79,7 @@ def main():
     for _test in test_files:
         path = os.path.join("golden_tests", _test)
         results[_test] = run_test(path)
-    print("В итоге: ")
+    print("\nВ итоге: ")
     passed = sum(1 for v in results.values() if v)
     total = len(results)
     for _test, success in results.items():
