@@ -22,7 +22,7 @@ class Memory:
             return (self.processor.r_int >> 16) & 0xFF
         elif address == 0x83:
             return (self.processor.r_int >> 24) & 0xFF
-            
+
         offer = address % self.cache_block_size
         set_idx = (address // self.cache_block_size) % self.cache_lines
         tag = (address // self.cache_block_size) // self.cache_lines
