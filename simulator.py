@@ -14,6 +14,15 @@ class Memory:
         self.misses = 0
 
     def read_byte(self, address):
+        if address == 0x80:
+            return self.processor.r_int & 0xFF
+        elif address == 0x81:
+            return (self.processor.r_int >> 8) & 0xFF
+        elif address == 0x82:
+            return (self.processor.r_int >> 16) & 0xFF
+        elif address == 0x83:
+            return (self.processor.r_int >> 24) & 0xFF
+            
         offer = address % self.cache_block_size
         set_idx = (address // self.cache_block_size) % self.cache_lines
         tag = (address // self.cache_block_size) // self.cache_lines

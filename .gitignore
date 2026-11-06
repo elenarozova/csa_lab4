@@ -8,6 +8,7 @@ __pycache__/
 *.asm
 simulator.log
 program_ast.txt
+schedule.txt
 
 .mypy_cache/
 .ruff_cache/

@@ -1,6 +1,6 @@
 interrupt {
-    let s = read_byte(0x80)
-    print_byte(s, 0x4000 + count)
+    let s = read_word(0x80)
+    print_word(s, 0x4000 + count)
     count = count+1
 }
 let digit = read_word(0x4000)
