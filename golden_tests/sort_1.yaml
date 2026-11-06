@@ -1,0 +1,59 @@
+name: sort_1
+description: "Проверка"
+source_code: |
+  interrupt {
+    let s = read_byte(0x80)
+    print_byte(s, 0x4000 + count)
+    count = count + 1
+  }
+  let len = read_byte(0x4000)
+  let st_addr = 0x4001
+  let cur_ad = st_addr
+  let i_0 = 0
+  let i_1 = 0
+  let digit = 0
+  let min = 0xff
+  while(i_0 < len){
+      cur_ad = st_addr
+      min = 0xff
+      i_1 = 0
+      while (i_1 < len){
+          digit = read_byte(cur_ad)
+          if (digit < min){
+              min = digit
+          }
+          cur_ad = cur_ad + 1
+          i_1 = i_1 + 1
+      }
+      print_byte(min, 0x84)
+      i_1 = 0
+      cur_ad = st_addr
+      while (i_1 < len){
+          digit = read_byte(cur_ad)
+          if (digit == min){
+              print_byte(0xff, cur_ad)
+              break
+          }
+          cur_ad = cur_ad + 1
+          i_1 = i_1 + 1
+      }
+    i_0 = i_0 + 1
+
+  }
+
+input_schedule: 
+  - [10, 5]
+  - [11, 65]
+  - [12, 108]
+  - [13, 105]
+  - [14, 99]
+  - [15, 101]
+output_codes: [65, 99, 101, 105, 108]
+cycles_total: 20592
+cache_hits: 4594
+cache_misses: 665
+log_fragment: |
+  [Такт 10] - прерывание (trap)
+  Сохраняем PC=0x0101 в EPC
+  Записываем значение 5 в R_INT
+  [Такт 20592] EXECUTE: halt - остановка процессора
