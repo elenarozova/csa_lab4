@@ -22,7 +22,6 @@ class Memory:
             return (self.processor.r_int >> 16) & 0xFF
         elif address == 0x83:
             return (self.processor.r_int >> 24) & 0xFF
-
         offer = address % self.cache_block_size
         set_idx = (address // self.cache_block_size) % self.cache_lines
         tag = (address // self.cache_block_size) // self.cache_lines
@@ -55,7 +54,7 @@ class Memory:
         tag = (address // self.cache_block_size) // self.cache_lines
         if self.cache_valid[set_idx] and self.cache_tags[set_idx] == tag:
             self.cache_data[set_idx][offer] = value & 0xFF
-        if address == 0x84:
+        if  0x84<= address <= 0x87:
             self.processor.output_buffer.append(chr(value & 0xFF))
             self.processor.log(
                 f"[Такт {self.processor.cycles}] ВЫВОД: символ '{chr(value & 0xFF)}' (ASCII {value & 0xFF})"

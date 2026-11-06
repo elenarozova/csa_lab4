@@ -169,6 +169,19 @@ def do_if_math(line, reg="r0"):
     str_oper = None
     if line.startswith("-"):
         return 0
+    if line.startswith("adc("):
+        args = line[4:-1].split(",") 
+        if len(args) != 2:
+            print(f"Ошибка: adc требует 2 аргумента: adc(Rs, Op2)")
+            sys.exit(1)
+        rs_arg = args[0].strip()
+        op2_arg = args[1].strip()
+        if do_if_math(rs_arg, reg) == 0:
+            load_operand(rs_arg, reg)
+        if do_if_math(op2_arg, "r3") == 0:
+            load_operand(op2_arg, "r3")
+        printl(f"adc {reg}, {reg}, r3")
+        return 1
     if "read_byte(" in line or "read_word(" in line:
         return 0
     if ">>" in line:
