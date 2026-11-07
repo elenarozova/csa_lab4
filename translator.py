@@ -170,7 +170,7 @@ def do_if_math(line, reg="r0"):
     if line.startswith("-"):
         return 0
     if line.startswith("adc("):
-        args = line[4:-1].split(",") 
+        args = line[4:-1].split(",")
         if len(args) != 2:
             print(f"Ошибка: adc требует 2 аргумента: adc(Rs, Op2)")
             sys.exit(1)
@@ -328,7 +328,7 @@ def do_print(line):
         if "print_byte" in line:
             printl(f"store_byte [r2], r0")
         else:
-            printl(f"store [r2], r0") 
+            printl(f"store [r2], r0")
     else:
         if port.startswith("0x") or port.isdigit():
             if "print_byte" in line:

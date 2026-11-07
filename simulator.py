@@ -54,7 +54,7 @@ class Memory:
         tag = (address // self.cache_block_size) // self.cache_lines
         if self.cache_valid[set_idx] and self.cache_tags[set_idx] == tag:
             self.cache_data[set_idx][offer] = value & 0xFF
-        if  0x84<= address <= 0x87:
+        if 0x84 <= address <= 0x87:
             self.processor.output_buffer.append(chr(value & 0xFF))
             self.processor.log(
                 f"[Такт {self.processor.cycles}] ВЫВОД: символ '{chr(value & 0xFF)}' (ASCII {value & 0xFF})"
