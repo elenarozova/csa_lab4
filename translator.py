@@ -147,7 +147,7 @@ def put_pstr(text, current_addr):
 def load_operand(value, register):
     if ("read_word" in value) or ("read_byte" in value):
         if in_interrupt:
-            printl(f"load {register}, R_INT")
+            printl(f"load {register}, [0x80]")
             return
         value_m = value.split("(")
         addr = value_m[1].strip().replace(")", "")
@@ -322,11 +322,13 @@ def do_print(line):
         base = parts[0].strip()
         var_name = parts[1].strip()
         var_addr = symbol_table[var_name]
+        printl(f"load r2, #{base}")
         printl(f"load r1, [0x{var_addr:04X}]")
+        printl(f"add r2, r2, r1")
         if "print_byte" in line:
-            printl(f"store_byte [{base}+r1], r0")
+            printl(f"store_byte [r2], r0")
         else:
-            printl(f"store [{base}+r1], r0")
+            printl(f"store [r2], r0") 
     else:
         if port.startswith("0x") or port.isdigit():
             if "print_byte" in line:

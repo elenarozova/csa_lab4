@@ -1,6 +1,6 @@
 interrupt {
 }
-let a_low = 0x00000000
+let a_low = 0xFFFFFFFF
 let a_high = 0x00000001
 let b_low = 0xFFFFFFFF
 let b_high = 0x00000000
