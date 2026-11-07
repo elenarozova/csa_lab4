@@ -172,7 +172,7 @@ def do_if_math(line, reg="r0"):
     if line.startswith("adc("):
         args = line[4:-1].split(",")
         if len(args) != 2:
-            print(f"Ошибка: adc требует 2 аргумента: adc(Rs, Op2)")
+            print("Ошибка: adc требует 2 аргумента: adc(Rs, Op2)")
             sys.exit(1)
         rs_arg = args[0].strip()
         op2_arg = args[1].strip()
@@ -324,11 +324,11 @@ def do_print(line):
         var_addr = symbol_table[var_name]
         printl(f"load r2, #{base}")
         printl(f"load r1, [0x{var_addr:04X}]")
-        printl(f"add r2, r2, r1")
+        printl("add r2, r2, r1")
         if "print_byte" in line:
-            printl(f"store_byte [r2], r0")
+            printl("store_byte [r2], r0")
         else:
-            printl(f"store [r2], r0")
+            printl("store [r2], r0")
     else:
         if port.startswith("0x") or port.isdigit():
             if "print_byte" in line:
