@@ -1,0 +1,203 @@
+name: linear_filter
+description: "Проверка cache"
+source_code: |
+  interrupt {
+    let s = read_byte(0x80)
+    print_byte(s, 0x4000 + count)
+    count = count + 1
+  }
+  let len = read_byte(0x4000)
+  let arr_start = 0x4001
+  let window_size = 4
+  let i = 0
+  while (i + window_size <= len) {
+      let sum = 0
+      let j = 0
+      while (j < window_size) {
+          let idx = arr_start + i 
+          idx = idx + j     
+          let val = read_byte(idx)
+          sum = sum + val
+          j = j + 1
+      }
+      print_byte(sum, 0x84)
+      i = i + 1
+  }
+
+ast: |
+  Program
+    Interrupt
+      Program
+        LetDecl(s)
+          ReadByte
+            Number(0x80)
+        PrintByte
+          Variable(s)
+          BinOp(+)
+            Number(0x4000)
+            Variable(count)
+        Assign(count)
+          BinOp(+)
+            Variable(count)
+            Number(1)
+    LetDecl(len)
+      ReadByte
+        Number(0x4000)
+    LetDecl(arr_start)
+      Number(0x4001)
+    LetDecl(window_size)
+      Number(4)
+    LetDecl(i)
+      Number(0)
+    WhileStmt
+      Compare(<=)
+        BinOp(+)
+          Variable(i)
+          Variable(window_size)
+        Variable(len)
+      Body:
+        Program
+          LetDecl(sum)
+            Number(0)
+          LetDecl(j)
+            Number(0)
+          WhileStmt
+            Compare(<)
+              Variable(j)
+              Variable(window_size)
+            Body:
+              Program
+                LetDecl(idx)
+                  BinOp(+)
+                    Variable(arr_start)
+                    Variable(i)
+                Assign(idx)
+                  BinOp(+)
+                    Variable(idx)
+                    Variable(j)
+                LetDecl(val)
+                  ReadByte
+                    Variable(idx)
+                Assign(sum)
+                  BinOp(+)
+                    Variable(sum)
+                    Variable(val)
+                Assign(j)
+                  BinOp(+)
+                    Variable(j)
+                    Number(1)
+          PrintByte
+            Variable(sum)
+            Number(0x84)
+          Assign(i)
+            BinOp(+)
+              Variable(i)
+              Number(1)
+
+
+input_schedule: 
+  - [10, 16]
+  - [11, 1]
+  - [12, 2]
+  - [13, 3]
+  - [14, 4]
+  - [15, 5]
+  - [16, 6]
+  - [17, 7]
+  - [18, 8]
+  - [19, 9]
+  - [20, 10]
+  - [21, 11]
+  - [22, 12]
+  - [23, 13]
+  - [24, 14]
+  - [25, 15]
+  - [26, 16]
+
+output_codes: [10, 14, 18, 22, 26, 30, 34, 38, 42, 46, 50, 54, 58]
+cycles_total: 36085
+cache_hits: 8685
+cache_misses: 2575
+
+machine_code: |
+  0000 - 11 00 30 88 00  - store [0x0088], r0
+  0005 - 11 10 30 8C 00  - store [0x008C], r1
+  000A - 11 20 30 90 00  - store [0x0090], r2
+  000F - 11 30 30 94 00  - store [0x0094], r3
+  0014 - 10 00 30 80 00  - load r0, [0x80]
+  0019 - 11 00 30 04 30  - store [0x3004], r0
+  001E - 10 00 30 04 30  - load r0, [0x3004]
+  0023 - 10 20 20 00 40  - load r2, #0x4000
+  0028 - 10 10 30 00 30  - load r1, [0x3000]
+  002D - 00 22 01        - add r2, r2, r1
+  0030 - 13 02 40        - store_byte [r2], r0
+  0033 - 10 00 30 00 30  - load r0, [0x3000]
+  0038 - 10 30 10 01     - load r3, #1
+  003C - 00 00 03        - add r0, r0, r3
+  003F - 11 00 30 00 30  - store [0x3000], r0
+  0044 - 10 00 30 88 00  - load r0, [0x0088]
+  0049 - 10 10 30 8C 00  - load r1, [0x008C]
+  004E - 10 20 30 90 00  - load r2, [0x0090]
+  0053 - 10 30 30 94 00  - load r3, [0x0094]
+  0058 - 42              - reti
+  0100 - 40              - int_enable
+  0101 - 10 10 20 00 40  - load r1, #0x4000
+  0106 - 12 01 40        - load_byte r0, [r1]
+  0109 - 11 00 30 08 30  - store [0x3008], r0
+  010E - 10 00 20 01 40  - load r0, #0x4001
+  0113 - 11 00 30 0C 30  - store [0x300C], r0
+  0118 - 10 00 10 04     - load r0, #4
+  011C - 11 00 30 10 30  - store [0x3010], r0
+  0121 - 10 00 10 00     - load r0, #0
+  0125 - 11 00 30 14 30  - store [0x3014], r0
+  012A - 10 00 30 14 30  - load r0, [0x3014]
+  012F - 10 30 30 10 30  - load r3, [0x3010]
+  0134 - 00 00 03        - add r0, r0, r3
+  0137 - 10 20 30 08 30  - load r2, [0x3008]
+  013C - 20 00 02        - cmp r0, r2
+  013F - 34 DC 01        - jgt end_while_0
+  0142 - 10 00 10 00     - load r0, #0
+  0146 - 11 00 30 18 30  - store [0x3018], r0
+  014B - 10 00 10 00     - load r0, #0
+  014F - 11 00 30 1C 30  - store [0x301C], r0
+  0154 - 10 00 30 1C 30  - load r0, [0x301C]
+  0159 - 10 20 30 10 30  - load r2, [0x3010]
+  015E - 20 00 02        - cmp r0, r2
+  0161 - 34 BE 01        - jgt end_while_1
+  0164 - 31 BE 01        - jeq end_while_1
+  0167 - 10 00 30 0C 30  - load r0, [0x300C]
+  016C - 10 30 30 14 30  - load r3, [0x3014]
+  0171 - 00 00 03        - add r0, r0, r3
+  0174 - 11 00 30 20 30  - store [0x3020], r0
+  0179 - 10 00 30 20 30  - load r0, [0x3020]
+  017E - 10 30 30 1C 30  - load r3, [0x301C]
+  0183 - 00 00 03        - add r0, r0, r3
+  0186 - 11 00 30 20 30  - store [0x3020], r0
+  018B - 10 10 30 20 30  - load r1, [0x3020]
+  0190 - 12 01 40        - load_byte r0, [r1]
+  0193 - 11 00 30 24 30  - store [0x3024], r0
+  0198 - 10 00 30 18 30  - load r0, [0x3018]
+  019D - 10 30 30 24 30  - load r3, [0x3024]
+  01A2 - 00 00 03        - add r0, r0, r3
+  01A5 - 11 00 30 18 30  - store [0x3018], r0
+  01AA - 10 00 30 1C 30  - load r0, [0x301C]
+  01AF - 10 30 10 01     - load r3, #1
+  01B3 - 00 00 03        - add r0, r0, r3
+  01B6 - 11 00 30 1C 30  - store [0x301C], r0
+  01BB - 30 54 01        - jmp while_1
+  01BE - 10 00 30 18 30  - load r0, [0x3018]
+  01C3 - 13 00 30 84 00  - store_byte [0x84], r0
+  01C8 - 10 00 30 14 30  - load r0, [0x3014]
+  01CD - 10 30 10 01     - load r3, #1
+  01D1 - 00 00 03        - add r0, r0, r3
+  01D4 - 11 00 30 14 30  - store [0x3014], r0
+  01D9 - 30 2A 01        - jmp while_0
+  01DC - 43              - halt
+
+
+
+log_fragment: |
+  [Такт 10] - прерывание (trap)
+  Сохраняем PC=0x0101 в EPC
+  Записываем значение 16 в R_INT
+  [Такт 36085] EXECUTE: halt - остановка процессора

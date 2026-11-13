@@ -1,0 +1,22 @@
+interrupt {
+  let s = read_byte(0x80)
+  print_byte(s, 0x4000 + count)
+  count = count + 1
+}
+let len = read_byte(0x4000)
+let arr_start = 0x4001
+let window_size = 4
+let i = 0
+while (i + window_size <= len) {
+    let sum = 0
+    let j = 0
+    while (j < window_size) {
+        let idx = arr_start + i 
+        idx = idx + j     
+        let val = read_byte(idx)
+        sum = sum + val
+        j = j + 1
+    }
+    print_byte(sum, 0x84)
+    i = i + 1
+}
