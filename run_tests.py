@@ -23,7 +23,7 @@ def run_test(test_file) -> bool:
     with open(schedule_file, "w", encoding="utf-8") as f:
         for tick, value in test.get("input_schedule", []):
             f.write(f"{tick} {value}\n")
-    ok, out, err = run_com(f"python3 translator.py {source_file}")
+    ok, out, err = run_com(f"python3 compiler.py {source_file}")
     if not ok:
         print(f"ошибка в трансляторе:\n{err}")
         return False
