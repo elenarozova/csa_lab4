@@ -12,11 +12,72 @@ source_code: |
   print_word(r_low, 0x84)
   print_word(r_high, 0x84)
 
+ast: |
+  Program
+    Interrupt
+      Program
+    LetDecl(a_low)
+      Number(0xFFFFFFFF)
+    LetDecl(a_high)
+      Number(0x00000001)
+    LetDecl(b_low)
+      Number(0xFFFFFFFF)
+    LetDecl(b_high)
+      Number(0x00000000)
+    LetDecl(r_low)
+      BinOp(+)
+        Variable(a_low)
+        Variable(b_low)
+    LetDecl(r_high)
+      Variable(adc(a_high, b_high))
+    PrintWord
+      Variable(r_low)
+      Number(0x84)
+    PrintWord
+      Variable(r_high)
+      Number(0x84)
+
+
 input_schedule: []
 output_codes: [254, 255, 255, 255, 2, 0, 0, 0]
 cycles_total: 431
 cache_hits: 89
 cache_misses: 31
+
+machine_code: |
+  0000 - 11 00 30 88 00  - store [0x0088], r0
+  0005 - 11 10 30 8C 00  - store [0x008C], r1
+  000A - 11 20 30 90 00  - store [0x0090], r2
+  000F - 11 30 30 94 00  - store [0x0094], r3
+  0014 - 10 00 30 88 00  - load r0, [0x0088]
+  0019 - 10 10 30 8C 00  - load r1, [0x008C]
+  001E - 10 20 30 90 00  - load r2, [0x0090]
+  0023 - 10 30 30 94 00  - load r3, [0x0094]
+  0028 - 42              - reti
+  0100 - 40              - int_enable
+  0101 - 10 00 20 FF FF  - load r0, #0xFFFFFFFF
+  0106 - 11 00 30 04 30  - store [0x3004], r0
+  010B - 10 00 10 01     - load r0, #0x00000001
+  010F - 11 00 30 08 30  - store [0x3008], r0
+  0114 - 10 00 20 FF FF  - load r0, #0xFFFFFFFF
+  0119 - 11 00 30 0C 30  - store [0x300C], r0
+  011E - 10 00 10 00     - load r0, #0x00000000
+  0122 - 11 00 30 10 30  - store [0x3010], r0
+  0127 - 10 00 30 04 30  - load r0, [0x3004]
+  012C - 10 30 30 0C 30  - load r3, [0x300C]
+  0131 - 00 00 03        - add r0, r0, r3
+  0134 - 11 00 30 14 30  - store [0x3014], r0
+  0139 - 10 00 30 08 30  - load r0, [0x3008]
+  013E - 10 30 30 10 30  - load r3, [0x3010]
+  0143 - 02 00 03        - adc r0, r0, r3
+  0146 - 11 00 30 18 30  - store [0x3018], r0
+  014B - 10 00 30 14 30  - load r0, [0x3014]
+  0150 - 11 00 30 84 00  - store [0x84], r0
+  0155 - 10 00 30 18 30  - load r0, [0x3018]
+  015A - 11 00 30 84 00  - store [0x84], r0
+  015F - 43              - halt
+
+
 log_fragment: |
   [Такт 10] EXECUTE: int_enable (прерывания разрешены)
   [Такт 373] ВЫВОД: символ 'þ' (ASCII 254)

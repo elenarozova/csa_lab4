@@ -111,6 +111,337 @@ source_code: |
       }
   }
 
+ast: |
+    Program
+        Interrupt
+            Program
+            LetDecl(s)
+                ReadByte
+                Number(0x80)
+            PrintByte
+                Variable(s)
+                BinOp(+)
+                Number(0x4000)
+                Variable(count)
+            Assign(count)
+                BinOp(+)
+                Variable(count)
+                Number(1)
+        LetDecl(addr)
+            Number(0x4000)
+        LetDecl(flen)
+            Number(0)
+        LetDecl(i)
+            Number(0)
+        LetDecl(ch)
+            ReadByte
+            Variable(addr)
+        WhileStmt
+            Compare(!=)
+            Variable(ch)
+            Number(10)
+            Body:
+            Program
+                Assign(flen)
+                BinOp(+)
+                    Variable(flen)
+                    Number(1)
+                Assign(addr)
+                BinOp(+)
+                    Variable(addr)
+                    Number(1)
+                Assign(ch)
+                ReadByte
+                    Variable(addr)
+        Assign(addr)
+            Number(0x4000)
+        LetDecl(param_ad)
+            BinOp(+)
+            Variable(addr)
+            Variable(flen)
+        Assign(param_ad)
+            BinOp(+)
+            Variable(param_ad)
+            Number(1)
+        Assign(i)
+            Number(0)
+        WhileStmt
+            Compare(<)
+            Variable(i)
+            Variable(flen)
+            Body:
+            Program
+                Assign(ch)
+                ReadByte
+                    Variable(addr)
+                IfStmt
+                Compare(==)
+                    Variable(ch)
+                    Number(37)
+                Body:
+                    Program
+                    Assign(addr)
+                        BinOp(+)
+                        Variable(addr)
+                        Number(1)
+                    Assign(i)
+                        BinOp(+)
+                        Variable(i)
+                        Number(1)
+                    LetDecl(left_align)
+                        Number(0)
+                    LetDecl(width)
+                        Number(0)
+                    LetDecl(done)
+                        Number(0)
+                    WhileStmt
+                        Compare(==)
+                        Variable(done)
+                        Number(0)
+                        Body:
+                        Program
+                            LetDecl(spec_ch)
+                            ReadByte
+                                Variable(addr)
+                            IfStmt
+                            Compare(==)
+                                Variable(spec_ch)
+                                Number(45)
+                            Body:
+                                Program
+                                Assign(left_align)
+                                    Number(1)
+                            IfStmt
+                            AndCond
+                                Compare(>=)
+                                Variable(spec_ch)
+                                Number(48)
+                                Compare(<=)
+                                Variable(spec_ch)
+                                Number(57)
+                            Body:
+                                Program
+                                Assign(width)
+                                    BinOp(*)
+                                    Variable(width)
+                                    Number(10)
+                                Assign(width)
+                                    BinOp(+)
+                                    Variable(width)
+                                    Variable(spec_ch)
+                                Assign(width)
+                                    BinOp(-)
+                                    Variable(width)
+                                    Number(48)
+                            IfStmt
+                            Compare(==)
+                                Variable(spec_ch)
+                                Number(100)
+                            Body:
+                                Program
+                                Assign(done)
+                                    Number(1)
+                            Assign(addr)
+                            BinOp(+)
+                                Variable(addr)
+                                Number(1)
+                            Assign(i)
+                            BinOp(+)
+                                Variable(i)
+                                Number(1)
+                    LetDecl(num)
+                        Number(0)
+                    LetDecl(pch)
+                        ReadByte
+                        Variable(param_ad)
+                    WhileStmt
+                        Compare(!=)
+                        Variable(pch)
+                        Number(10)
+                        Body:
+                        Program
+                            LetDecl(digit)
+                            BinOp(-)
+                                Variable(pch)
+                                Number(48)
+                            Assign(num)
+                            BinOp(*)
+                                Variable(num)
+                                Number(10)
+                            Assign(num)
+                            BinOp(+)
+                                Variable(num)
+                                Variable(digit)
+                            Assign(param_ad)
+                            BinOp(+)
+                                Variable(param_ad)
+                                Number(1)
+                            Assign(pch)
+                            ReadByte
+                                Variable(param_ad)
+                    Assign(param_ad)
+                        BinOp(+)
+                        Variable(param_ad)
+                        Number(1)
+                    LetDecl(buf)
+                        Number(0x6000)
+                    LetDecl(write_pos)
+                        Variable(buf)
+                    LetDecl(str_len)
+                        Number(0)
+                    IfStmt
+                        Compare(==)
+                        Variable(num)
+                        Number(0)
+                        Body:
+                        Program
+                            PrintByte
+                            Number(48)
+                            Number(0x84)
+                            Assign(write_pos)
+                            BinOp(+)
+                                Variable(buf)
+                                Number(1)
+                            Assign(str_len)
+                            Number(1)
+                        ElseBody:
+                        Program
+                            LetDecl(temp)
+                            Variable(num)
+                            WhileStmt
+                            Compare(>)
+                                Variable(temp)
+                                Number(0)
+                            Body:
+                                Program
+                                LetDecl(digit)
+                                    BinOp(%)
+                                    Variable(temp)
+                                    Number(10)
+                                Assign(digit)
+                                    BinOp(+)
+                                    Variable(digit)
+                                    Number(48)
+                                PrintByte
+                                    Variable(digit)
+                                    Variable(write_pos)
+                                Assign(write_pos)
+                                    BinOp(+)
+                                    Variable(write_pos)
+                                    Number(1)
+                                Assign(str_len)
+                                    BinOp(+)
+                                    Variable(str_len)
+                                    Number(1)
+                                Assign(temp)
+                                    BinOp(/)
+                                    Variable(temp)
+                                    Number(10)
+                    LetDecl(spaces)
+                        Number(0)
+                    IfStmt
+                        Compare(>)
+                        Variable(width)
+                        Variable(str_len)
+                        Body:
+                        Program
+                            Assign(spaces)
+                            BinOp(-)
+                                Variable(width)
+                                Variable(str_len)
+                    IfStmt
+                        Compare(==)
+                        Variable(left_align)
+                        Number(0)
+                        Body:
+                        Program
+                            LetDecl(sp)
+                            Number(0)
+                            WhileStmt
+                            Compare(<)
+                                Variable(sp)
+                                Variable(spaces)
+                            Body:
+                                Program
+                                PrintByte
+                                    Number(32)
+                                    Number(0x84)
+                                Assign(sp)
+                                    BinOp(+)
+                                    Variable(sp)
+                                    Number(1)
+                            LetDecl(read_pos)
+                            BinOp(-)
+                                Variable(write_pos)
+                                Number(1)
+                            WhileStmt
+                            Compare(>=)
+                                Variable(read_pos)
+                                Variable(buf)
+                            Body:
+                                Program
+                                LetDecl(sym)
+                                    ReadByte
+                                    Variable(read_pos)
+                                PrintByte
+                                    Variable(sym)
+                                    Number(0x84)
+                                Assign(read_pos)
+                                    BinOp(-)
+                                    Variable(read_pos)
+                                    Number(1)
+                        ElseBody:
+                        Program
+                            LetDecl(read_pos)
+                            BinOp(-)
+                                Variable(write_pos)
+                                Number(1)
+                            WhileStmt
+                            Compare(>=)
+                                Variable(read_pos)
+                                Variable(buf)
+                            Body:
+                                Program
+                                LetDecl(sym)
+                                    ReadByte
+                                    Variable(read_pos)
+                                PrintByte
+                                    Variable(sym)
+                                    Number(0x84)
+                                Assign(read_pos)
+                                    BinOp(-)
+                                    Variable(read_pos)
+                                    Number(1)
+                            LetDecl(sp)
+                            Number(0)
+                            WhileStmt
+                            Compare(<)
+                                Variable(sp)
+                                Variable(spaces)
+                            Body:
+                                Program
+                                PrintByte
+                                    Number(32)
+                                    Number(0x84)
+                                Assign(sp)
+                                    BinOp(+)
+                                    Variable(sp)
+                                    Number(1)
+                ElseBody:
+                    Program
+                    PrintByte
+                        Variable(ch)
+                        Number(0x84)
+                    Assign(addr)
+                        BinOp(+)
+                        Variable(addr)
+                        Number(1)
+                    Assign(i)
+                        BinOp(+)
+                        Variable(i)
+                        Number(1)
+
+
 input_schedule:
   - [10, 78]  
   - [11, 117] 
@@ -129,6 +460,317 @@ output_codes: [78, 117, 109, 58, 32, 32, 32, 32, 52, 50]
 cycles_total: 13836
 cache_hits: 3660
 cache_misses: 946
+
+machine_code: |
+    0000 - 11 00 30 88 00  - store [0x0088], r0
+    0005 - 11 10 30 8C 00  - store [0x008C], r1
+    000A - 11 20 30 90 00  - store [0x0090], r2
+    000F - 11 30 30 94 00  - store [0x0094], r3
+    0014 - 10 00 30 80 00  - load r0, [0x80]
+    0019 - 11 00 30 04 30  - store [0x3004], r0
+    001E - 10 00 30 04 30  - load r0, [0x3004]
+    0023 - 10 20 20 00 40  - load r2, #0x4000
+    0028 - 10 10 30 00 30  - load r1, [0x3000]
+    002D - 00 22 01        - add r2, r2, r1
+    0030 - 13 02 40        - store_byte [r2], r0
+    0033 - 10 00 30 00 30  - load r0, [0x3000]
+    0038 - 10 30 10 01     - load r3, #1
+    003C - 00 00 03        - add r0, r0, r3
+    003F - 11 00 30 00 30  - store [0x3000], r0
+    0044 - 10 00 30 88 00  - load r0, [0x0088]
+    0049 - 10 10 30 8C 00  - load r1, [0x008C]
+    004E - 10 20 30 90 00  - load r2, [0x0090]
+    0053 - 10 30 30 94 00  - load r3, [0x0094]
+    0058 - 42              - reti
+    0100 - 40              - int_enable
+    0101 - 10 00 20 00 40  - load r0, #0x4000
+    0106 - 11 00 30 08 30  - store [0x3008], r0
+    010B - 10 00 10 00     - load r0, #0
+    010F - 11 00 30 0C 30  - store [0x300C], r0
+    0114 - 10 00 10 00     - load r0, #0
+    0118 - 11 00 30 10 30  - store [0x3010], r0
+    011D - 10 10 30 08 30  - load r1, [0x3008]
+    0122 - 12 01 40        - load_byte r0, [r1]
+    0125 - 11 00 30 14 30  - store [0x3014], r0
+    012A - 10 00 30 14 30  - load r0, [0x3014]
+    012F - 10 20 10 0A     - load r2, #10
+    0133 - 20 00 02        - cmp r0, r2
+    0136 - 31 6B 01        - jeq end_while_0
+    0139 - 10 00 30 0C 30  - load r0, [0x300C]
+    013E - 10 30 10 01     - load r3, #1
+    0142 - 00 00 03        - add r0, r0, r3
+    0145 - 11 00 30 0C 30  - store [0x300C], r0
+    014A - 10 00 30 08 30  - load r0, [0x3008]
+    014F - 10 30 10 01     - load r3, #1
+    0153 - 00 00 03        - add r0, r0, r3
+    0156 - 11 00 30 08 30  - store [0x3008], r0
+    015B - 10 10 30 08 30  - load r1, [0x3008]
+    0160 - 12 01 40        - load_byte r0, [r1]
+    0163 - 11 00 30 14 30  - store [0x3014], r0
+    0168 - 30 2A 01        - jmp while_0
+    016B - 10 00 20 00 40  - load r0, #0x4000
+    0170 - 11 00 30 08 30  - store [0x3008], r0
+    0175 - 10 00 30 08 30  - load r0, [0x3008]
+    017A - 10 30 30 0C 30  - load r3, [0x300C]
+    017F - 00 00 03        - add r0, r0, r3
+    0182 - 11 00 30 18 30  - store [0x3018], r0
+    0187 - 10 00 30 18 30  - load r0, [0x3018]
+    018C - 10 30 10 01     - load r3, #1
+    0190 - 00 00 03        - add r0, r0, r3
+    0193 - 11 00 30 18 30  - store [0x3018], r0
+    0198 - 10 00 10 00     - load r0, #0
+    019C - 11 00 30 10 30  - store [0x3010], r0
+    01A1 - 10 00 30 10 30  - load r0, [0x3010]
+    01A6 - 10 20 30 0C 30  - load r2, [0x300C]
+    01AB - 20 00 02        - cmp r0, r2
+    01AE - 34 AA 05        - jgt end_while_1
+    01B1 - 31 AA 05        - jeq end_while_1
+    01B4 - 10 10 30 08 30  - load r1, [0x3008]
+    01B9 - 12 01 40        - load_byte r0, [r1]
+    01BC - 11 00 30 14 30  - store [0x3014], r0
+    01C1 - 10 00 30 14 30  - load r0, [0x3014]
+    01C6 - 10 20 10 25     - load r2, #37
+    01CA - 20 00 02        - cmp r0, r2
+    01CD - 32 7B 05        - jne else_0
+    01D0 - 10 00 30 08 30  - load r0, [0x3008]
+    01D5 - 10 30 10 01     - load r3, #1
+    01D9 - 00 00 03        - add r0, r0, r3
+    01DC - 11 00 30 08 30  - store [0x3008], r0
+    01E1 - 10 00 30 10 30  - load r0, [0x3010]
+    01E6 - 10 30 10 01     - load r3, #1
+    01EA - 00 00 03        - add r0, r0, r3
+    01ED - 11 00 30 10 30  - store [0x3010], r0
+    01F2 - 10 00 10 00     - load r0, #0
+    01F6 - 11 00 30 1C 30  - store [0x301C], r0
+    01FB - 10 00 10 00     - load r0, #0
+    01FF - 11 00 30 20 30  - store [0x3020], r0
+    0204 - 10 00 10 00     - load r0, #0
+    0208 - 11 00 30 24 30  - store [0x3024], r0
+    020D - 10 00 30 24 30  - load r0, [0x3024]
+    0212 - 10 20 10 00     - load r2, #0
+    0216 - 20 00 02        - cmp r0, r2
+    0219 - 32 D0 02        - jne end_while_2
+    021C - 10 10 30 08 30  - load r1, [0x3008]
+    0221 - 12 01 40        - load_byte r0, [r1]
+    0224 - 11 00 30 28 30  - store [0x3028], r0
+    0229 - 10 00 30 28 30  - load r0, [0x3028]
+    022E - 10 20 10 2D     - load r2, #45
+    0232 - 20 00 02        - cmp r0, r2
+    0235 - 32 41 02        - jne else_1
+    0238 - 10 00 10 01     - load r0, #1
+    023C - 11 00 30 1C 30  - store [0x301C], r0
+    0241 - 10 00 30 28 30  - load r0, [0x3028]
+    0246 - 10 20 10 30     - load r2, #48
+    024A - 20 00 02        - cmp r0, r2
+    024D - 33 93 02        - jlt else_2
+    0250 - 10 00 30 28 30  - load r0, [0x3028]
+    0255 - 10 20 10 39     - load r2, #57
+    0259 - 20 00 02        - cmp r0, r2
+    025C - 34 93 02        - jgt else_2
+    025F - 10 00 30 20 30  - load r0, [0x3020]
+    0264 - 10 30 10 0A     - load r3, #10
+    0268 - 03 00 03        - mul r0, r0, r3
+    026B - 11 00 30 20 30  - store [0x3020], r0
+    0270 - 10 00 30 20 30  - load r0, [0x3020]
+    0275 - 10 30 30 28 30  - load r3, [0x3028]
+    027A - 00 00 03        - add r0, r0, r3
+    027D - 11 00 30 20 30  - store [0x3020], r0
+    0282 - 10 00 30 20 30  - load r0, [0x3020]
+    0287 - 10 30 10 30     - load r3, #48
+    028B - 01 00 03        - sub r0, r0, r3
+    028E - 11 00 30 20 30  - store [0x3020], r0
+    0293 - 10 00 30 28 30  - load r0, [0x3028]
+    0298 - 10 20 10 64     - load r2, #100
+    029C - 20 00 02        - cmp r0, r2
+    029F - 32 AB 02        - jne else_3
+    02A2 - 10 00 10 01     - load r0, #1
+    02A6 - 11 00 30 24 30  - store [0x3024], r0
+    02AB - 10 00 30 08 30  - load r0, [0x3008]
+    02B0 - 10 30 10 01     - load r3, #1
+    02B4 - 00 00 03        - add r0, r0, r3
+    02B7 - 11 00 30 08 30  - store [0x3008], r0
+    02BC - 10 00 30 10 30  - load r0, [0x3010]
+    02C1 - 10 30 10 01     - load r3, #1
+    02C5 - 00 00 03        - add r0, r0, r3
+    02C8 - 11 00 30 10 30  - store [0x3010], r0
+    02CD - 30 0D 02        - jmp while_2
+    02D0 - 10 00 10 00     - load r0, #0
+    02D4 - 11 00 30 2C 30  - store [0x302C], r0
+    02D9 - 10 10 30 18 30  - load r1, [0x3018]
+    02DE - 12 01 40        - load_byte r0, [r1]
+    02E1 - 11 00 30 30 30  - store [0x3030], r0
+    02E6 - 10 00 30 30 30  - load r0, [0x3030]
+    02EB - 10 20 10 0A     - load r2, #10
+    02EF - 20 00 02        - cmp r0, r2
+    02F2 - 31 4A 03        - jeq end_while_3
+    02F5 - 10 00 30 30 30  - load r0, [0x3030]
+    02FA - 10 30 10 30     - load r3, #48
+    02FE - 01 00 03        - sub r0, r0, r3
+    0301 - 11 00 30 34 30  - store [0x3034], r0
+    0306 - 10 00 30 2C 30  - load r0, [0x302C]
+    030B - 10 30 10 0A     - load r3, #10
+    030F - 03 00 03        - mul r0, r0, r3
+    0312 - 11 00 30 2C 30  - store [0x302C], r0
+    0317 - 10 00 30 2C 30  - load r0, [0x302C]
+    031C - 10 30 30 34 30  - load r3, [0x3034]
+    0321 - 00 00 03        - add r0, r0, r3
+    0324 - 11 00 30 2C 30  - store [0x302C], r0
+    0329 - 10 00 30 18 30  - load r0, [0x3018]
+    032E - 10 30 10 01     - load r3, #1
+    0332 - 00 00 03        - add r0, r0, r3
+    0335 - 11 00 30 18 30  - store [0x3018], r0
+    033A - 10 10 30 18 30  - load r1, [0x3018]
+    033F - 12 01 40        - load_byte r0, [r1]
+    0342 - 11 00 30 30 30  - store [0x3030], r0
+    0347 - 30 E6 02        - jmp while_3
+    034A - 10 00 30 18 30  - load r0, [0x3018]
+    034F - 10 30 10 01     - load r3, #1
+    0353 - 00 00 03        - add r0, r0, r3
+    0356 - 11 00 30 18 30  - store [0x3018], r0
+    035B - 10 00 20 00 60  - load r0, #0x6000
+    0360 - 11 00 30 38 30  - store [0x3038], r0
+    0365 - 10 00 30 38 30  - load r0, [0x3038]
+    036A - 11 00 30 3C 30  - store [0x303C], r0
+    036F - 10 00 10 00     - load r0, #0
+    0373 - 11 00 30 40 30  - store [0x3040], r0
+    0378 - 10 00 30 2C 30  - load r0, [0x302C]
+    037D - 10 20 10 00     - load r2, #0
+    0381 - 20 00 02        - cmp r0, r2
+    0384 - 32 AD 03        - jne else_4
+    0387 - 10 00 10 30     - load r0, #48
+    038B - 13 00 30 84 00  - store_byte [0x84], r0
+    0390 - 10 00 30 38 30  - load r0, [0x3038]
+    0395 - 10 30 10 01     - load r3, #1
+    0399 - 00 00 03        - add r0, r0, r3
+    039C - 11 00 30 3C 30  - store [0x303C], r0
+    03A1 - 10 00 10 01     - load r0, #1
+    03A5 - 11 00 30 40 30  - store [0x3040], r0
+    03AA - 30 2E 04        - jmp end_if_4
+    03AD - 10 00 30 2C 30  - load r0, [0x302C]
+    03B2 - 11 00 30 44 30  - store [0x3044], r0
+    03B7 - 10 00 30 44 30  - load r0, [0x3044]
+    03BC - 10 20 10 00     - load r2, #0
+    03C0 - 20 00 02        - cmp r0, r2
+    03C3 - 33 2E 04        - jlt end_while_4
+    03C6 - 31 2E 04        - jeq end_while_4
+    03C9 - 10 00 30 44 30  - load r0, [0x3044]
+    03CE - 10 30 10 0A     - load r3, #10
+    03D2 - 05 00 03        - mod r0, r0, r3
+    03D5 - 11 00 30 34 30  - store [0x3034], r0
+    03DA - 10 00 30 34 30  - load r0, [0x3034]
+    03DF - 10 30 10 30     - load r3, #48
+    03E3 - 00 00 03        - add r0, r0, r3
+    03E6 - 11 00 30 34 30  - store [0x3034], r0
+    03EB - 10 00 30 34 30  - load r0, [0x3034]
+    03F0 - 10 10 30 3C 30  - load r1, [0x303C]
+    03F5 - 13 01 40        - store_byte [r1], r0
+    03F8 - 10 00 30 3C 30  - load r0, [0x303C]
+    03FD - 10 30 10 01     - load r3, #1
+    0401 - 00 00 03        - add r0, r0, r3
+    0404 - 11 00 30 3C 30  - store [0x303C], r0
+    0409 - 10 00 30 40 30  - load r0, [0x3040]
+    040E - 10 30 10 01     - load r3, #1
+    0412 - 00 00 03        - add r0, r0, r3
+    0415 - 11 00 30 40 30  - store [0x3040], r0
+    041A - 10 00 30 44 30  - load r0, [0x3044]
+    041F - 10 30 10 0A     - load r3, #10
+    0423 - 04 00 03        - div r0, r0, r3
+    0426 - 11 00 30 44 30  - store [0x3044], r0
+    042B - 30 B7 03        - jmp while_4
+    042E - 10 00 10 00     - load r0, #0
+    0432 - 11 00 30 48 30  - store [0x3048], r0
+    0437 - 10 00 30 20 30  - load r0, [0x3020]
+    043C - 10 20 30 40 30  - load r2, [0x3040]
+    0441 - 20 00 02        - cmp r0, r2
+    0444 - 33 5C 04        - jlt else_5
+    0447 - 31 5C 04        - jeq else_5
+    044A - 10 00 30 20 30  - load r0, [0x3020]
+    044F - 10 30 30 40 30  - load r3, [0x3040]
+    0454 - 01 00 03        - sub r0, r0, r3
+    0457 - 11 00 30 48 30  - store [0x3048], r0
+    045C - 10 00 30 1C 30  - load r0, [0x301C]
+    0461 - 10 20 10 00     - load r2, #0
+    0465 - 20 00 02        - cmp r0, r2
+    0468 - 32 F3 04        - jne else_6
+    046B - 10 00 10 00     - load r0, #0
+    046F - 11 00 30 4C 30  - store [0x304C], r0
+    0474 - 10 00 30 4C 30  - load r0, [0x304C]
+    0479 - 10 20 30 48 30  - load r2, [0x3048]
+    047E - 20 00 02        - cmp r0, r2
+    0481 - 34 A4 04        - jgt end_while_5
+    0484 - 31 A4 04        - jeq end_while_5
+    0487 - 10 00 10 20     - load r0, #32
+    048B - 13 00 30 84 00  - store_byte [0x84], r0
+    0490 - 10 00 30 4C 30  - load r0, [0x304C]
+    0495 - 10 30 10 01     - load r3, #1
+    0499 - 00 00 03        - add r0, r0, r3
+    049C - 11 00 30 4C 30  - store [0x304C], r0
+    04A1 - 30 74 04        - jmp while_5
+    04A4 - 10 00 30 3C 30  - load r0, [0x303C]
+    04A9 - 10 30 10 01     - load r3, #1
+    04AD - 01 00 03        - sub r0, r0, r3
+    04B0 - 11 00 30 50 30  - store [0x3050], r0
+    04B5 - 10 00 30 50 30  - load r0, [0x3050]
+    04BA - 10 20 30 38 30  - load r2, [0x3038]
+    04BF - 20 00 02        - cmp r0, r2
+    04C2 - 33 F0 04        - jlt end_while_6
+    04C5 - 10 10 30 50 30  - load r1, [0x3050]
+    04CA - 12 01 40        - load_byte r0, [r1]
+    04CD - 11 00 30 54 30  - store [0x3054], r0
+    04D2 - 10 00 30 54 30  - load r0, [0x3054]
+    04D7 - 13 00 30 84 00  - store_byte [0x84], r0
+    04DC - 10 00 30 50 30  - load r0, [0x3050]
+    04E1 - 10 30 10 01     - load r3, #1
+    04E5 - 01 00 03        - sub r0, r0, r3
+    04E8 - 11 00 30 50 30  - store [0x3050], r0
+    04ED - 30 B5 04        - jmp while_6
+    04F0 - 30 78 05        - jmp end_if_6
+    04F3 - 10 00 30 3C 30  - load r0, [0x303C]
+    04F8 - 10 30 10 01     - load r3, #1
+    04FC - 01 00 03        - sub r0, r0, r3
+    04FF - 11 00 30 50 30  - store [0x3050], r0
+    0504 - 10 00 30 50 30  - load r0, [0x3050]
+    0509 - 10 20 30 38 30  - load r2, [0x3038]
+    050E - 20 00 02        - cmp r0, r2
+    0511 - 33 3F 05        - jlt end_while_7
+    0514 - 10 10 30 50 30  - load r1, [0x3050]
+    0519 - 12 01 40        - load_byte r0, [r1]
+    051C - 11 00 30 54 30  - store [0x3054], r0
+    0521 - 10 00 30 54 30  - load r0, [0x3054]
+    0526 - 13 00 30 84 00  - store_byte [0x84], r0
+    052B - 10 00 30 50 30  - load r0, [0x3050]
+    0530 - 10 30 10 01     - load r3, #1
+    0534 - 01 00 03        - sub r0, r0, r3
+    0537 - 11 00 30 50 30  - store [0x3050], r0
+    053C - 30 04 05        - jmp while_7
+    053F - 10 00 10 00     - load r0, #0
+    0543 - 11 00 30 4C 30  - store [0x304C], r0
+    0548 - 10 00 30 4C 30  - load r0, [0x304C]
+    054D - 10 20 30 48 30  - load r2, [0x3048]
+    0552 - 20 00 02        - cmp r0, r2
+    0555 - 34 78 05        - jgt end_while_8
+    0558 - 31 78 05        - jeq end_while_8
+    055B - 10 00 10 20     - load r0, #32
+    055F - 13 00 30 84 00  - store_byte [0x84], r0
+    0564 - 10 00 30 4C 30  - load r0, [0x304C]
+    0569 - 10 30 10 01     - load r3, #1
+    056D - 00 00 03        - add r0, r0, r3
+    0570 - 11 00 30 4C 30  - store [0x304C], r0
+    0575 - 30 48 05        - jmp while_8
+    0578 - 30 A7 05        - jmp end_if_0
+    057B - 10 00 30 14 30  - load r0, [0x3014]
+    0580 - 13 00 30 84 00  - store_byte [0x84], r0
+    0585 - 10 00 30 08 30  - load r0, [0x3008]
+    058A - 10 30 10 01     - load r3, #1
+    058E - 00 00 03        - add r0, r0, r3
+    0591 - 11 00 30 08 30  - store [0x3008], r0
+    0596 - 10 00 30 10 30  - load r0, [0x3010]
+    059B - 10 30 10 01     - load r3, #1
+    059F - 00 00 03        - add r0, r0, r3
+    05A2 - 11 00 30 10 30  - store [0x3010], r0
+    05A7 - 30 A1 01        - jmp while_1
+    05AA - 43              - halt
+
 log_fragment: |
     [Такт 10] EXECUTE: int_enable (прерывания разрешены)
     [state] R0=00000000, R1=00000000, R2=00000000, R3=00000000, R4=00000000, R5=00000000, R6=00000000, R7=00000000 | flags: z=0 n=0 c=0 v=0 | IE=1

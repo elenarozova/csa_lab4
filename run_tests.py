@@ -1,7 +1,7 @@
 import os
 import subprocess
 import sys
-
+import shutil
 import yaml
 
 
@@ -28,6 +28,7 @@ def run_test(test_file) -> bool:
         print(f"ошибка в трансляторе:\n{err}")
         return False
     ok, out, err = run_com("python3 assembler.py program.asm")
+    shutil.copy("program.bin", f"golden_tests/{name}.bin")
     if not ok:
         print(f"ошибка в превращении ассемблера в машинный код:\n{err}")
         return False

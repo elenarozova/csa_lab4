@@ -33,12 +33,173 @@ source_code: |
         }
     }
 
+ast: |
+    Program
+        Interrupt
+            Program
+            LetDecl(s)
+                ReadByte
+                Number(0x80)
+            PrintByte
+                Variable(s)
+                BinOp(+)
+                Number(0x4000)
+                Variable(count)
+            Assign(count)
+                BinOp(+)
+                Variable(count)
+                Number(1)
+        LetDecl(digit)
+            ReadByte
+            Number(0x4000)
+        IfStmt
+            Compare(<)
+            Variable(digit)
+            Number(1)
+            Body:
+            Program
+                PrintByte
+                Number(-1)
+                Number(0x84)
+            ElseBody:
+            Program
+                IfStmt
+                Compare(==)
+                    Variable(digit)
+                    Number(1)
+                Body:
+                    Program
+                    PrintByte
+                        Number(0)
+                        Number(0x84)
+                ElseBody:
+                    Program
+                    LetDecl(flag)
+                        Number(0)
+                    LetDecl(i)
+                        Number(2)
+                    WhileStmt
+                        Compare(<=)
+                        BinOp(*)
+                            Variable(i)
+                            Variable(i)
+                        Variable(digit)
+                        Body:
+                        Program
+                            IfStmt
+                            Compare(==)
+                                BinOp(%)
+                                Variable(digit)
+                                Variable(i)
+                                Number(0)
+                            Body:
+                                Program
+                                Assign(flag)
+                                    Number(1)
+                                Break
+                            Assign(i)
+                            BinOp(+)
+                                Variable(i)
+                                Number(1)
+                    IfStmt
+                        Compare(==)
+                        Variable(flag)
+                        Number(1)
+                        Body:
+                        Program
+                            PrintByte
+                            Number(0)
+                            Number(0x84)
+                        ElseBody:
+                        Program
+                            PrintByte
+                            Number(1)
+                            Number(0x84)
+
+
 input_schedule: 
   - [10, 17]
 output_codes: [1]
 cycles_total: 1429
 cache_hits: 426
 cache_misses: 95
+
+machine_code: |
+    0000 - 11 00 30 88 00  - store [0x0088], r0
+    0005 - 11 10 30 8C 00  - store [0x008C], r1
+    000A - 11 20 30 90 00  - store [0x0090], r2
+    000F - 11 30 30 94 00  - store [0x0094], r3
+    0014 - 10 00 30 80 00  - load r0, [0x80]
+    0019 - 11 00 30 04 30  - store [0x3004], r0
+    001E - 10 00 30 04 30  - load r0, [0x3004]
+    0023 - 10 20 20 00 40  - load r2, #0x4000
+    0028 - 10 10 30 00 30  - load r1, [0x3000]
+    002D - 00 22 01        - add r2, r2, r1
+    0030 - 13 02 40        - store_byte [r2], r0
+    0033 - 10 00 30 00 30  - load r0, [0x3000]
+    0038 - 10 30 10 01     - load r3, #1
+    003C - 00 00 03        - add r0, r0, r3
+    003F - 11 00 30 00 30  - store [0x3000], r0
+    0044 - 10 00 30 88 00  - load r0, [0x0088]
+    0049 - 10 10 30 8C 00  - load r1, [0x008C]
+    004E - 10 20 30 90 00  - load r2, [0x0090]
+    0053 - 10 30 30 94 00  - load r3, [0x0094]
+    0058 - 42              - reti
+    0100 - 40              - int_enable
+    0101 - 10 10 20 00 40  - load r1, #0x4000
+    0106 - 12 01 40        - load_byte r0, [r1]
+    0109 - 11 00 30 08 30  - store [0x3008], r0
+    010E - 10 00 30 08 30  - load r0, [0x3008]
+    0113 - 10 20 10 01     - load r2, #1
+    0117 - 20 00 02        - cmp r0, r2
+    011A - 34 2C 01        - jgt else_0
+    011D - 31 2C 01        - jeq else_0
+    0120 - 10 00 10 FF     - load r0, #-1
+    0124 - 13 00 30 84 00  - store_byte [0x84], r0
+    0129 - 30 CC 01        - jmp end_if_0
+    012C - 10 00 30 08 30  - load r0, [0x3008]
+    0131 - 10 20 10 01     - load r2, #1
+    0135 - 20 00 02        - cmp r0, r2
+    0138 - 32 47 01        - jne else_1
+    013B - 10 00 10 00     - load r0, #0
+    013F - 13 00 30 84 00  - store_byte [0x84], r0
+    0144 - 30 CC 01        - jmp end_if_1
+    0147 - 10 00 10 00     - load r0, #0
+    014B - 11 00 30 0C 30  - store [0x300C], r0
+    0150 - 10 00 10 02     - load r0, #2
+    0154 - 11 00 30 10 30  - store [0x3010], r0
+    0159 - 10 00 30 10 30  - load r0, [0x3010]
+    015E - 10 30 30 10 30  - load r3, [0x3010]
+    0163 - 03 00 03        - mul r0, r0, r3
+    0166 - 10 20 30 08 30  - load r2, [0x3008]
+    016B - 20 00 02        - cmp r0, r2
+    016E - 34 A8 01        - jgt end_while_0
+    0171 - 10 00 30 08 30  - load r0, [0x3008]
+    0176 - 10 30 30 10 30  - load r3, [0x3010]
+    017B - 05 00 03        - mod r0, r0, r3
+    017E - 10 20 10 00     - load r2, #0
+    0182 - 20 00 02        - cmp r0, r2
+    0185 - 32 94 01        - jne else_2
+    0188 - 10 00 10 01     - load r0, #1
+    018C - 11 00 30 0C 30  - store [0x300C], r0
+    0191 - 30 A8 01        - jmp end_while_0
+    0194 - 10 00 30 10 30  - load r0, [0x3010]
+    0199 - 10 30 10 01     - load r3, #1
+    019D - 00 00 03        - add r0, r0, r3
+    01A0 - 11 00 30 10 30  - store [0x3010], r0
+    01A5 - 30 59 01        - jmp while_0
+    01A8 - 10 00 30 0C 30  - load r0, [0x300C]
+    01AD - 10 20 10 01     - load r2, #1
+    01B1 - 20 00 02        - cmp r0, r2
+    01B4 - 32 C3 01        - jne else_3
+    01B7 - 10 00 10 00     - load r0, #0
+    01BB - 13 00 30 84 00  - store_byte [0x84], r0
+    01C0 - 30 CC 01        - jmp end_if_3
+    01C3 - 10 00 10 01     - load r0, #1
+    01C7 - 13 00 30 84 00  - store_byte [0x84], r0
+    01CC - 43              - halt
+
+
 log_fragment: |
   [Такт 10] - прерывание (trap)
   Сохраняем PC=0x0101 в EPC
