@@ -1,0 +1,138 @@
+name: format_strings_%5d
+description: "Форматирование строк %5d"
+source_code: |
+  interrupt {
+    let s = read_byte(0x80)
+    print_byte(s, 0x4000 + count)
+    count = count + 1
+  }
+  let addr = 0x4000
+  let flen = 0
+  let i = 0
+  let ch = read_byte(addr)
+  while (ch!=10){
+      flen = flen + 1
+      addr = addr + 1
+      ch= read_byte(addr)
+  }
+
+  addr = 0x4000
+  let param_ad = addr+flen
+  param_ad = param_ad + 1
+  i = 0
+  while (i<flen){
+      ch = read_byte(addr)
+      if (ch == 37) {
+          addr = addr+1
+          i = i+1
+
+          let left_align = 0
+          let width = 0
+          let done = 0
+          while (done == 0) {
+              let spec_ch = read_byte(addr)
+              if (spec_ch == 45) {  
+                  left_align = 1
+              }
+              if (spec_ch >= 48 and spec_ch <= 57) {
+                  width = width * 10
+                  width = width + spec_ch
+                  width = width - 48
+              }
+              if (spec_ch == 100) {
+                  done = 1
+              }
+              addr = addr + 1
+              i = i + 1
+          }
+          
+          let num = 0
+          let pch = read_byte(param_ad)
+          while (pch!= 10){
+              let digit = pch-48
+              num = num*10
+              num = num+digit
+              param_ad = param_ad+1
+              pch = read_byte(param_ad)
+          }
+          param_ad = param_ad + 1
+
+          let buf = 0x6000
+          let write_pos = buf
+          let str_len = 0
+          if (num == 0) {
+              print_byte(48, 0x84) 
+              write_pos = buf + 1 
+              str_len = 1
+          } else {
+              let temp = num
+              while (temp > 0) {
+                  let digit = temp % 10
+                  digit = digit + 48
+                  print_byte(digit, write_pos)
+                  write_pos = write_pos + 1
+                  str_len = str_len + 1
+                  temp = temp / 10
+              }
+          }
+          let spaces = 0
+          if (width > str_len) {
+              spaces = width - str_len
+          }
+          if (left_align ==0){
+              let sp = 0
+              while (sp< spaces){
+                  print_byte(32, 0x84)
+                  sp = sp + 1
+              }
+              let read_pos = write_pos - 1
+              while (read_pos >= buf) {
+                  let sym = read_byte(read_pos)
+                  print_byte(sym, 0x84)
+                  read_pos = read_pos - 1
+              }
+          } else {
+              let read_pos = write_pos - 1
+              while (read_pos >= buf) {
+                  let sym = read_byte(read_pos)
+                  print_byte(sym, 0x84)
+                  read_pos = read_pos - 1
+              }
+              let sp = 0
+              while (sp< spaces){
+                  print_byte(32, 0x84)
+                  sp = sp + 1
+              }
+          }
+      } else {
+          print_byte(ch, 0x84)
+          addr = addr+1
+          i = i+1
+      }
+  }
+
+input_schedule:
+  - [10, 78]  
+  - [11, 117] 
+  - [12, 109]  
+  - [13, 58]  
+  - [14, 32]   
+  - [15, 37]  
+  - [16, 53]    
+  - [17, 100]  
+  - [18, 10]   
+  - [19, 52]   
+  - [20, 50]   
+  - [21, 10]   
+
+output_codes: [78, 117, 109, 58, 32, 32, 32, 32, 52, 50]
+cycles_total: 13836
+cache_hits: 3660
+cache_misses: 946
+log_fragment: |
+    [Такт 10] EXECUTE: int_enable (прерывания разрешены)
+    [state] R0=00000000, R1=00000000, R2=00000000, R3=00000000, R4=00000000, R5=00000000, R6=00000000, R7=00000000 | flags: z=0 n=0 c=0 v=0 | IE=1
+    [Такт 10] - прерывание (trap)
+    Сохраняем PC=0x0101 в EPC
+    Записываем значение 78 в R_INT
+    [Такт 13836] EXECUTE: halt - остановка процессора

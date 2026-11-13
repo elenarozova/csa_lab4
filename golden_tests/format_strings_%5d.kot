@@ -1,0 +1,109 @@
+interrupt {
+  let s = read_byte(0x80)
+  print_byte(s, 0x4000 + count)
+  count = count + 1
+}
+let addr = 0x4000
+let flen = 0
+let i = 0
+let ch = read_byte(addr)
+while (ch!=10){
+    flen = flen + 1
+    addr = addr + 1
+    ch= read_byte(addr)
+}
+
+addr = 0x4000
+let param_ad = addr+flen
+param_ad = param_ad + 1
+i = 0
+while (i<flen){
+    ch = read_byte(addr)
+    if (ch == 37) {
+        addr = addr+1
+        i = i+1
+
+        let left_align = 0
+        let width = 0
+        let done = 0
+        while (done == 0) {
+            let spec_ch = read_byte(addr)
+            if (spec_ch == 45) {  
+                left_align = 1
+            }
+            if (spec_ch >= 48 and spec_ch <= 57) {
+                width = width * 10
+                width = width + spec_ch
+                width = width - 48
+            }
+            if (spec_ch == 100) {
+                done = 1
+            }
+            addr = addr + 1
+            i = i + 1
+        }
+        
+        let num = 0
+        let pch = read_byte(param_ad)
+        while (pch!= 10){
+            let digit = pch-48
+            num = num*10
+            num = num+digit
+            param_ad = param_ad+1
+            pch = read_byte(param_ad)
+        }
+        param_ad = param_ad + 1
+
+        let buf = 0x6000
+        let write_pos = buf
+        let str_len = 0
+        if (num == 0) {
+            print_byte(48, 0x84) 
+            write_pos = buf + 1 
+            str_len = 1
+        } else {
+            let temp = num
+            while (temp > 0) {
+                let digit = temp % 10
+                digit = digit + 48
+                print_byte(digit, write_pos)
+                write_pos = write_pos + 1
+                str_len = str_len + 1
+                temp = temp / 10
+            }
+        }
+        let spaces = 0
+        if (width > str_len) {
+            spaces = width - str_len
+        }
+        if (left_align ==0){
+            let sp = 0
+            while (sp< spaces){
+                print_byte(32, 0x84)
+                sp = sp + 1
+            }
+            let read_pos = write_pos - 1
+            while (read_pos >= buf) {
+                let sym = read_byte(read_pos)
+                print_byte(sym, 0x84)
+                read_pos = read_pos - 1
+            }
+        } else {
+            let read_pos = write_pos - 1
+            while (read_pos >= buf) {
+                let sym = read_byte(read_pos)
+                print_byte(sym, 0x84)
+                read_pos = read_pos - 1
+            }
+            let sp = 0
+            while (sp< spaces){
+                print_byte(32, 0x84)
+                sp = sp + 1
+            }
+        }
+    } else {
+        print_byte(ch, 0x84)
+        addr = addr+1
+        i = i+1
+    }
+}
