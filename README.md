@@ -486,7 +486,7 @@ DataPath реализован в классе `Processor` и включает с
 
 ## ControlUnit
 
-![ControlUnit](doc/control_unit.png)
+![ControlUnit](doc/Control_unit.png)
 
 
 Control Unit реализована как **Hardwired** (комбинационная логика) и включает следующие блоки:
