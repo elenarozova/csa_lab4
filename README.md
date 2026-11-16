@@ -586,7 +586,7 @@ Control Unit реализована как **Hardwired** (комбинацион
 | `sort` | Сортировка списка чисел (через байтовый буфер) | [sort.yaml](golden_tests/sort_1.yaml) |
 | `double_precision` | 64-битная арифметика через инструкцию `adc` | [double_precision.yaml](golden_tests/double_precision.yaml) |
 | `is_prime` | Проверка простоты числа (алгоритм `alg1`) | [is_prime_17.yaml](golden_tests/is_prime_17.yaml) |
-| `format_strings` | Форматирование строк (`%d`, `%5d`, `%-5d`) | [format_strings.yaml](golden_tests/format_string_%d.yaml) |
+| `format_strings` | Форматирование строк (`%d`, `%5d`, `%-5d`) | [format_strings.yaml](https://github.com/elenarozova/csa_lab4/blob/main/golden_tests/format_string_%25d.yaml) |
 | `linear_filter` | Демонстрация работы кэша (временная локальность) | [linear_filter.yaml](golden_tests/linear_filter.yaml) |
 
 ### Запуск тестов
