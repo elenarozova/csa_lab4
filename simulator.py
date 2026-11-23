@@ -70,6 +70,17 @@ class Memory:
 class Processor:
     def __init__(self, log_filename="simulator.log"):
         self.memory = Memory(self)
+        self.state = "FETCH"
+        self.step_cnt = 0
+        self.instr_len = 0
+        self.opcode = None
+        self.mode = None
+
+        self.rd = self.rs = self.rt = None
+        self.op2 = 0
+        self.result = 0
+        self.addr = 0
+        self.halted = False
         self.regs = [0] * 8
 
         self.pc = 0x0100  # счётчик команд
@@ -93,306 +104,295 @@ class Processor:
         self.log_file = open(self.log_filename, "w", encoding="utf-8")
         self.log("Начало работы процессора")
 
-    def step(self):
-        if self.check_interrupt():
-            return True
-        opcode = self.memory.read_byte(self.pc)
-        mode = None
-        self.ir = [opcode]
-        # узнаем длину инструкции
-        if opcode in [0x40, 0x41, 0x42, 0x43]:
-            instr_len = 1
-        else:
-            self.ir.append(self.memory.read_byte(self.pc + 1))
-            self.ir.append(self.memory.read_byte(self.pc + 2))
-            mode = (self.ir[2] >> 4) & 0x0F
-            if mode in [0, 4, 5]:
-                instr_len = 3
-            elif mode in [2, 3, 6]:
-                instr_len = 5
-            elif mode == 1:
-                instr_len = 4
-        for i in range(3, instr_len):
-            self.ir.append(self.memory.read_byte(self.pc + i))
-        ir_hex = " ".join(f"{b:02X}" for b in self.ir)
-        self.log(f"[Такт {self.cycles}] FETCH: PC=0x{self.pc:04X}, IR=[{ir_hex}]")
-        self.log(f"[Такт {self.cycles}] DECODE: опкод=0x{opcode:02X}")
+    def tick(self):
+        if self.halted:
+            return False
+        self.cycles += 1
+        if self.state == "FETCH" and self.step_cnt == 0:
+            if self.check_interrupt():
+                return True
+        if self.state == "FETCH":
+            self.fetch()
+        elif self.state == "DECODE":
+            self.decode()
+        elif self.state == "EXECUTE":
+            self.execute()
+        elif self.state == "WRITEBACK":
+            self.writeback()
+        return not self.halted
 
-        if opcode in [0x40, 0x41, 0x42, 0x43]:
-            rd = rs = mode = rt = None
-        else:
-            rd = (self.ir[1] >> 4) & 0x0F
-            rs = self.ir[1] & 0x0F
-            rt = self.ir[2] & 0x0F
-            self.log(f"[Такт {self.cycles}] DECODE: Rd=R{rd}, Rs=R{rs}, MODE={mode}, Rt=R{rt}")
-
-        if opcode == 0x00:
-            if mode in [0, 1, 2]:
-                op2 = self.get_operand_value(mode, rt)
+    def fetch(self):
+        if self.step_cnt == 0:
+            self.opcode = self.memory.read_byte(self.pc)
+            self.ir = [self.opcode]
+            self.step_cnt = 1
+            if self.opcode in [0x40, 0x41, 0x42, 0x43]:
+                self.instr_len = 1
             else:
-                addr = self.get_address(mode, rs, rt)  # адрес
-                op2 = self.memory.read_word(addr)
-            result = self.regs[rs] + op2
-            self.update_flags(result, "add", self.regs[rs], op2)
-            self.log(f"[Такт {self.cycles}] EXECUTE: add R{rd} = R{rs}({self.regs[rs]}) + {op2} = {result}")
-            self.write_register(rd, result)
-            self.pc += instr_len
-            self.dump_state()
-            return True
+                self.instr_len = 3
+            return
+        if len(self.ir) < self.instr_len:
+            next_byte = self.memory.read_byte(self.pc + len(self.ir))
+            self.ir.append(next_byte)
+            if len(self.ir) == 3:
+                if self.opcode in [0x30, 0x31, 0x32, 0x33, 0x34]:
+                    self.instr_len = 3          # у прыжков всегда 3 байта
+                else:
+                    self.mode = (self.ir[2] >> 4) & 0x0F
+                    if self.mode in [0, 4, 5]:
+                        self.instr_len = 3
+                    elif self.mode in [2, 3, 6]:
+                        self.instr_len = 5
+                    elif self.mode == 1:
+                        self.instr_len = 4
+        if len(self.ir) == self.instr_len:
+            self.log(f"[Такт {self.cycles}] FETCH завершён: IR={[f'{b:02X}' for b in self.ir]}")
+            self.state = "DECODE"
+            self.step_cnt = 0
 
-        elif opcode == 0x01:
-            if mode in [0, 1, 2]:
-                op2 = self.get_operand_value(mode, rt)
+    def decode(self):
+        self.log(f"[Такт {self.cycles}] DECODE")        
+        if self.opcode not in [0x40, 0x41, 0x42, 0x43]:
+            self.rd = (self.ir[1] >> 4) & 0x0F
+            self.rs = self.ir[1] & 0x0F
+            self.rt = self.ir[2] & 0x0F
+        self.state = "EXECUTE"
+        self.step_cnt = 0
+
+    def execute(self):
+        self.log(f"[Такт {self.cycles}] EXECUTE")
+        if self.opcode == 0x00:
+            if self.mode in [0, 1, 2]:
+                op2 = self.get_operand_value(self.mode, self.rt)
             else:
-                addr = self.get_address(mode, rs, rt)  # адрес
+                addr = self.get_address(self.mode, self.rs, self.rt)  # адрес
                 op2 = self.memory.read_word(addr)
-            result = self.regs[rs] - op2
-            self.update_flags(result, "sub", self.regs[rs], op2)
-            self.log(f"[Такт {self.cycles}] EXECUTE: sub R{rd} = R{rs}({self.regs[rs]}) - {op2} = {result}")
-            self.write_register(rd, result)
-            self.pc += instr_len
-            return True
-        elif opcode == 0x02:
-            if mode not in [0, 1, 2]:
-                self.log(f"[Такт {self.cycles}] EXECUTE: adc не поддерживает MODE {mode}")
-                return False
-            op2 = self.get_operand_value(mode, rt)
-            result = self.regs[rs] + op2 + self.flag_c
+            self.result = self.regs[self.rs] + op2
+            self.update_flags(self.result, "add", self.regs[self.rs], op2)
+            self.log(f"[Такт {self.cycles}] EXECUTE: add R{self.rd} = R{self.rs}({self.regs[self.rs]}) + {op2} = {self.result}")
+            
+
+        elif self.opcode == 0x01:
+            if self.mode in [0, 1, 2]:
+                op2 = self.get_operand_value(self.mode, self.rt)
+            else:
+                addr = self.get_address(self.mode, self.rs, self.rt)  # адрес
+                op2 = self.memory.read_word(addr)
+            self.result = self.regs[self.rs] - op2
+            self.update_flags(self.result, "sub", self.regs[self.rs], op2)
+            self.log(f"[Такт {self.cycles}] EXECUTE: sub R{self.rd} = R{self.rs}({self.regs[self.rs]}) - {op2} = {self.result}")
+            
+        elif self.opcode == 0x02:
+            if self.mode not in [0, 1, 2]:
+                self.log(f"[Такт {self.cycles}] EXECUTE: adc не поддерживает MODE {self.mode}")
+            op2 = self.get_operand_value(self.mode, self.rt)
+            self.result = self.regs[self.rs] + op2 + self.flag_c
             self.log(
-                f"[Такт {self.cycles}] EXECUTE: adc R{rd} = R{rs}({self.regs[rs]}) + {op2} + C{self.flag_c} = {result}"
+                f"[Такт {self.cycles}] EXECUTE: adc R{self.rd} = R{self.rs}({self.regs[self.rs]}) + {op2} + C{self.flag_c} = {self.result}"
             )
-            self.update_flags(result, "adc", self.regs[rs], op2, self.flag_c)
-            self.write_register(rd, result)
-            self.pc += instr_len
-            self.dump_state()
-            return True
-
-        elif opcode == 0x03:
-            if mode not in [0, 1]:
+            self.update_flags(self.result, "adc", self.regs[self.rs], op2, self.flag_c)
+            
+        elif self.opcode == 0x03:
+            if self.mode not in [0, 1]:
                 self.log(f"[Такт {self.cycles}] EXECUTE: mul поддерживает только MODE 0, 1")
-                return False
-            op2 = self.get_operand_value(mode, rt)
-            result = (self.regs[rs] * op2) & 0xFFFFFFFF
-            self.log(f"[Такт {self.cycles}] EXECUTE: mul R{rd} = R{rs} * {op2} = {result}")
-            self.update_flags(result, "logic", self.regs[rs], op2)
-            self.write_register(rd, result)
-            self.pc += instr_len
-            self.dump_state()
-            return True
+            op2 = self.get_operand_value(self.mode, self.rt)
+            self.result = (self.regs[self.rs] * op2) & 0xFFFFFFFF
+            self.log(f"[Такт {self.cycles}] EXECUTE: mul R{self.rd} = R{self.rs} * {op2} = {self.result}")
+            self.update_flags(self.result, "logic", self.regs[self.rs], op2)
+            
 
-        elif opcode == 0x04:
-            if mode not in [0, 1]:
+        elif self.opcode == 0x04:
+            if self.mode not in [0, 1]:
                 self.log(f"[Такт {self.cycles}] EXECUTE: div поддерживает только MODE 0, 1")
-                return False
-            op2 = self.get_operand_value(mode, rt)
+            op2 = self.get_operand_value(self.mode, self.rt)
             if op2 == 0:
                 self.log(f"[Такт {self.cycles}] EXECUTE: Division by zero!")
-                return False
-            a = self.regs[rs]
+            a = self.regs[self.rs]
             if a > 0x7FFFFFFF:
                 a -= 0x100000000
             if op2 > 0x7FFFFFFF:
                 op2 -= 0x100000000
             res = a // op2
-            result = res & 0xFFFFFFFF
-            self.log(f"[Такт {self.cycles}] EXECUTE: div R{rd} = R{rs} // {op2} = {result}")
-            self.update_flags(result, "logic", self.regs[rs], op2)
-            self.write_register(rd, result)
-            self.pc += instr_len
-            self.dump_state()
-            return True
+            self.result = res & 0xFFFFFFFF
+            self.log(f"[Такт {self.cycles}] EXECUTE: div R{self.rd} = R{self.rs} // {op2} = {self.result}")
+            self.update_flags(self.result, "logic", self.regs[self.rs], op2)
+            
 
-        elif opcode == 0x05:
-            if mode not in [0, 1]:
+        elif self.opcode == 0x05:
+            if self.mode not in [0, 1]:
                 self.log(f"[Такт {self.cycles}] EXECUTE: mod поддерживает только MODE 0, 1")
-                return False
-            op2 = self.get_operand_value(mode, rt)
+            op2 = self.get_operand_value(self.mode, self.rt)
             if op2 == 0:
                 self.log(f"[Такт {self.cycles}] EXECUTE: Division by zero!")
-                return False
-            a = self.regs[rs]
+            a = self.regs[self.rs]
             if a > 0x7FFFFFFF:
                 a -= 0x100000000
             if op2 > 0x7FFFFFFF:
                 op2 -= 0x100000000
             res = a % op2
-            result = res & 0xFFFFFFFF
-            self.log(f"[Такт {self.cycles}] EXECUTE: mod R{rd} = R{rs} // {op2} = {result}")
-            self.update_flags(result, "logic", self.regs[rs], op2)
-            self.write_register(rd, result)
-            self.pc += instr_len
-            self.dump_state()
-            return True
+            self.result = res & 0xFFFFFFFF
+            self.log(f"[Такт {self.cycles}] EXECUTE: mod R{self.rd} = R{self.rs} // {op2} = {self.result}")
+            self.update_flags(self.result, "logic", self.regs[self.rs], op2)
+           
 
-        elif opcode == 0x06:
-            if mode in [0, 1, 2]:
-                op2 = self.get_operand_value(mode, rt)
+        elif self.opcode == 0x06:
+            if self.mode in [0, 1, 2]:
+                op2 = self.get_operand_value(self.mode, self.rt)
             else:
-                addr = self.get_address(mode, rs, rt)
+                addr = self.get_address(self.mode, self.rs, self.rt)
                 op2 = self.memory.read_word(addr)
-            result = self.regs[rs] & op2
-            self.log(f"[Такт {self.cycles}] EXECUTE: and R{rd} = R{rs}({self.regs[rs]}) & {op2} = {result}")
-            self.update_flags(result, "and", self.regs[rs], op2)
-            self.write_register(rd, result)
-            self.pc += instr_len
-            self.dump_state()
-            return True
+            self.result = self.regs[self.rs] & op2
+            self.log(f"[Такт {self.cycles}] EXECUTE: and R{self.rd} = R{self.rs}({self.regs[self.rs]}) & {op2} = {self.result}")
+            self.update_flags(self.result, "and", self.regs[self.rs], op2)
+            
 
-        elif opcode == 0x07:
-            if mode in [0, 1, 2]:
-                op2 = self.get_operand_value(mode, rt)
+        elif self.opcode == 0x07:
+            if self.mode in [0, 1, 2]:
+                op2 = self.get_operand_value(self.mode, self.rt)
             else:
-                addr = self.get_address(mode, rs, rt)
+                addr = self.get_address(self.mode, self.rs, self.rt)
                 op2 = self.memory.read_word(addr)
-            result = self.regs[rs] | op2
-            self.log(f"[Такт {self.cycles}] EXECUTE: or R{rd} = R{rs}({self.regs[rs]}) | {op2} = {result}")
-            self.update_flags(result, "or", self.regs[rs], op2)
-            self.write_register(rd, result)
-            self.pc += instr_len
-            self.dump_state()
-            return True
+            self.result = self.regs[self.rs] | op2
+            self.log(f"[Такт {self.cycles}] EXECUTE: or R{self.rd} = R{self.rs}({self.regs[self.rs]}) | {op2} = {self.result}")
+            self.update_flags(self.result, "or", self.regs[self.rs], op2)
+            
 
-        elif opcode == 0x08:
-            if mode != 1:
+        elif self.opcode == 0x08:
+            if self.mode != 1:
                 self.log(f"[Такт {self.cycles}] EXECUTE: lsl поддерживает только MODE 1")
-                return False
-            op2 = self.get_operand_value(mode, rt)
+            op2 = self.get_operand_value(self.mode, self.rt)
             if op2 < 0:
                 self.log(f"[Такт {self.cycles}] EXECUTE: lsl поддерживает только положительные сдвиги")
-                return False
-            result = (self.regs[rs] << op2) & 0xFFFFFFFF
-            self.log(f"[Такт {self.cycles}] EXECUTE: lsl R{rd} = R{rs} << {op2} = {result}")
-            self.update_flags(result, "logic", self.regs[rs], op2)
-            self.write_register(rd, result)
-            self.pc += instr_len
-            self.dump_state()
-            return True
+            self.result = (self.regs[self.rs] << op2) & 0xFFFFFFFF
+            self.log(f"[Такт {self.cycles}] EXECUTE: lsl R{self.rd} = R{self.rs} << {op2} = {self.result}")
+            self.update_flags(self.result, "logic", self.regs[self.rs], op2)
+           
 
-        elif opcode == 0x09:
-            if mode != 1:
+        elif self.opcode == 0x09:
+            if self.mode != 1:
                 self.log(f"[Такт {self.cycles}] EXECUTE: lsr поддерживает только MODE 1")
-                return False
-            op2 = self.get_operand_value(mode, rt)
+            op2 = self.get_operand_value(self.mode, self.rt)
             if op2 < 0:
                 self.log(f"[Такт {self.cycles}] EXECUTE: lsr поддерживает только положительные сдвиги")
-                return False
-            result = (self.regs[rs] >> op2) & 0xFFFFFFFF
-            self.log(f"[Такт {self.cycles}] EXECUTE: lsr R{rd} = R{rs} >> {op2} = {result}")
-            self.update_flags(result, "logic", self.regs[rs], op2)
-            self.write_register(rd, result)
-            self.pc += instr_len
-            self.dump_state()
-            return True
+            self.result = (self.regs[self.rs] >> op2) & 0xFFFFFFFF
+            self.log(f"[Такт {self.cycles}] EXECUTE: lsr R{self.rd} = R{self.rs} >> {op2} = {self.result}")
+            self.update_flags(self.result, "logic", self.regs[self.rs], op2)
+          
 
-        elif opcode == 0x10:
-            if mode in [0, 1, 2]:
-                op2 = self.get_operand_value(mode, rt)
-                self.log(f"[Такт {self.cycles}] EXECUTE: load (mov) R{rd} = R{rt}({op2})")
-                self.write_register(rd, op2)
+        elif self.opcode == 0x10:
+            if self.mode in [0, 1, 2]:
+                op2 = self.get_operand_value(self.mode, self.rt)
+                self.log(f"[Такт {self.cycles}] EXECUTE: load (mov) R{self.rd} = R {self.rt}({op2})")
+                
             else:
-                addr = self.get_address(mode, rs, rt)
+                addr = self.get_address(self.mode, self.rs, self.rt)
                 op2 = self.memory.read_word(addr)
-                self.log(f"[Такт {self.cycles}] EXECUTE: load R{rd} = [{addr:04X}] = {op2}")
-                self.write_register(rd, op2)
-            self.pc += instr_len
-            self.dump_state()
-            return True
+                self.log(f"[Такт {self.cycles}] EXECUTE: load R{self.rd} = [{addr:04X}] = {op2}")
+            self.result = op2
+                
 
-        elif opcode == 0x11:
-            addr = self.get_address(mode, rs, rt)
-            value = self.regs[rd]
+        elif self.opcode == 0x11:
+            addr = self.get_address(self.mode, self.rs, self.rt)
+            value = self.regs[self.rd]
             self.memory.write_word(addr, value)
-            self.log(f"[Такт {self.cycles}] EXECUTE: store R{rd} {addr}")
-            self.pc += instr_len
-            self.dump_state()
-            return True
+            self.log(f"[Такт {self.cycles}] EXECUTE: store R{self.rd} {addr}")
+            
 
-        elif opcode == 0x12:
-            addr = self.get_address(mode, rs, rt)
+        elif self.opcode == 0x12:
+            addr = self.get_address(self.mode, self.rs, self.rt)
             op2 = self.memory.read_byte(addr)
-            self.log(f"[Такт {self.cycles}] EXECUTE: load_byte R{rd} {op2}")
-            self.write_register(rd, op2)
-            self.pc += instr_len
-            self.dump_state()
-            return True
-
-        elif opcode == 0x13:
-            addr = self.get_address(mode, rs, rt)
-            value = self.regs[rd]
+            self.log(f"[Такт {self.cycles}] EXECUTE: load_byte R{self.rd} {op2}")
+            self.result = op2
+            
+        elif self.opcode == 0x13:
+            addr = self.get_address(self.mode, self.rs, self.rt)
+            value = self.regs[self.rd]
             self.memory.write_byte(addr, value)
-            self.log(f"[Такт {self.cycles}] EXECUTE: store_byte R{rd} {addr}")
-            self.pc += instr_len
-            self.dump_state()
-            return True
+            self.log(f"[Такт {self.cycles}] EXECUTE: store_byte R{self.rd} {addr}")
+            
 
-        elif opcode == 0x20:
-            if mode in [0, 1, 2]:
-                op2 = self.get_operand_value(mode, rt)
+        elif self.opcode == 0x20:
+            if self.mode in [0, 1, 2]:
+                op2 = self.get_operand_value(self.mode, self.rt)
             else:
-                addr = self.get_address(mode, rs, rt)
+                addr = self.get_address(self.mode, self.rs, self.rt)
                 op2 = self.memory.read_word(addr)
-            a = self.regs[rs]
-            result = a - op2
-            self.log(f"[Такт {self.cycles}] EXECUTE: CMP R{rs}({a}) - {op2} = {result}")
-            self.update_flags(result, "cmp", a, op2)
-            self.pc += instr_len
-            self.dump_state()
-            return True
-        elif opcode in [0x30, 0x31, 0x32, 0x33, 0x34]:
+            a = self.regs[self.rs]
+            self.result = a - op2
+            self.log(f"[Такт {self.cycles}] EXECUTE: CMP R{self.rs}({a}) - {op2} = {self.result}")
+            self.update_flags(self.result, "cmp", a, op2)
+            
+
+        elif self.opcode in [0x30, 0x31, 0x32, 0x33, 0x34]:
             addr = self.ir[1] | (self.ir[2] << 8)
             jump = False
-            if opcode == 0x30:
+            if self.opcode == 0x30:
                 jump = True
-            if opcode == 0x31:
+            if self.opcode == 0x31:
                 jump = self.flag_z == 1
-            elif opcode == 0x32:  # jne если Z==0
+            elif self.opcode == 0x32:  # jne если Z==0
                 jump = self.flag_z == 0
-            elif opcode == 0x33:  # jlt если N != V
+            elif self.opcode == 0x33:  # jlt если N != V
                 jump = self.flag_n != self.flag_v
-            elif opcode == 0x34:  # jgt если Z==0 и N == V
+            elif self.opcode == 0x34:  # jgt если Z==0 и N == V
                 jump = (self.flag_z == 0) and (self.flag_n == self.flag_v)
             if jump:
                 self.log(f"[Такт {self.cycles}] EXECUTE: jump to 0x{addr:04X}")
                 self.pc = addr
             else:
-                self.log(f"[Такт {self.cycles}] EXECUTE: no jump, continue to 0x{self.pc + instr_len:04X}")
-                self.pc += instr_len
-            self.dump_state()
-            return True
+                self.log(f"[Такт {self.cycles}] EXECUTE: no jump, continue to 0x{self.pc + self.instr_len:04X}")
+                self.pc += self.instr_len
+           
 
-        elif opcode == 0x40:
+        elif self.opcode == 0x40:
             self.ie = 1
             self.log(f"[Такт {self.cycles}] EXECUTE: int_enable (прерывания разрешены)")
-            self.pc += instr_len
-            self.dump_state()
-            return True
+            
 
-        elif opcode == 0x41:
+        elif self.opcode == 0x41:
             self.ie = 0
             self.log(f"[Такт {self.cycles}] EXECUTE: int_disable (прерывания запрещены)")
-            self.pc += instr_len
-            self.dump_state()
-            return True
+            
 
-        elif opcode == 0x42:
+        elif self.opcode == 0x42:
             self.log(f"[Такт {self.cycles}] EXECUTE: reti (возврат на 0x{self.epc:04X})")
             self.pc = self.epc
             self.ie = 1
             self.in_interrupt = False
-            self.dump_state()
-            return True
 
-        elif opcode == 0x43:
+        elif self.opcode == 0x43:
             self.log(f"[Такт {self.cycles}] EXECUTE: halt - остановка процессора")
-            return False
+            self.halted = True
+            self.state = "HALT"
+            return
         else:
-            self.log(f"[Такт {self.cycles}] EXECUTE: команда с опкодом 0x{opcode:02X} пока не реализована")
-            return False
+            self.log(f"Неизвестная команда 0x{self.opcode:02X}")
 
+        self.state = "WRITEBACK"
+        self.step_cnt = 0
+
+
+    def writeback(self):
+        self.log(f"[Такт {self.cycles}] WRITEBACK")
+        if self.opcode in [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x10, 0x12]:
+            self.write_register(self.rd, self.result)
+
+        if self.opcode in [0x30, 0x31, 0x32, 0x33, 0x34]:
+            pass
+        elif self.opcode == 0x42:  
+            pass
+        else:
+            self.pc += self.instr_len
+
+        self.dump_state()
+        self.state = "FETCH"
+        self.step_cnt = 0
+
+            
     def run(self):
         self.log("Процессор запущен")
-        limit = 50000
-        while self.step():
+        limit = 100000
+        while self.tick():
             if self.cycles > limit:
                 self.log(f"лимит {limit} тактов превышен")
                 break
@@ -405,7 +405,7 @@ class Processor:
         elif rd < 8:
             result_32 = result & 0xFFFFFFFF
             self.regs[rd] = result_32
-            self.log(f"[Такт {self.cycles}] WRITEBACK: R{rd} = {result_32}")
+            self.log(f"[Такт {self.cycles}] WRITEBACK: R{rd} = {result_32:08X}")
         else:
             self.log(f"[Такт {self.cycles}] WRITEBACK: регистр {rd} зарезервирован")
 
