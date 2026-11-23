@@ -456,7 +456,7 @@ store_byte [addr+1], r0        ; символ 0
 
 ## DataPath
 
-![DataPath](doc/datapath.png)
+![DataPath](doc/cisc.png)
 
 DataPath реализован в классе `Processor` и включает следующие компоненты:
 
