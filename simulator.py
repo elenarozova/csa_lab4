@@ -170,7 +170,8 @@ class Processor:
             self.result = self.regs[self.rs] + op2
             self.update_flags(self.result, "add", self.regs[self.rs], op2)
             self.log(
-                f"[Такт {self.cycles}] EXECUTE: add R{self.rd} = R{self.rs}({self.regs[self.rs]}) + {op2} = {self.result}"
+                f"[Такт {self.cycles}] EXECUTE: add R{self.rd} = "
+                +"R{self.rs}({self.regs[self.rs]}) + {op2} = {self.result}"
             )
 
         elif self.opcode == 0x01:
@@ -182,7 +183,8 @@ class Processor:
             self.result = self.regs[self.rs] - op2
             self.update_flags(self.result, "sub", self.regs[self.rs], op2)
             self.log(
-                f"[Такт {self.cycles}] EXECUTE: sub R{self.rd} = R{self.rs}({self.regs[self.rs]}) - {op2} = {self.result}"
+                f"[Такт {self.cycles}] EXECUTE: sub R{self.rd} ="
+                +" R{self.rs}({self.regs[self.rs]}) - {op2} = {self.result}"
             )
 
         elif self.opcode == 0x02:
@@ -191,7 +193,8 @@ class Processor:
             op2 = self.get_operand_value(self.mode, self.rt)
             self.result = self.regs[self.rs] + op2 + self.flag_c
             self.log(
-                f"[Такт {self.cycles}] EXECUTE: adc R{self.rd} = R{self.rs}({self.regs[self.rs]}) + {op2} + C{self.flag_c} = {self.result}"
+                f"[Такт {self.cycles}] EXECUTE: adc R{self.rd} ="
+                +" R{self.rs}({self.regs[self.rs]}) + {op2} + C{self.flag_c} = {self.result}"
             )
             self.update_flags(self.result, "adc", self.regs[self.rs], op2, self.flag_c)
 
@@ -243,7 +246,8 @@ class Processor:
                 op2 = self.memory.read_word(addr)
             self.result = self.regs[self.rs] & op2
             self.log(
-                f"[Такт {self.cycles}] EXECUTE: and R{self.rd} = R{self.rs}({self.regs[self.rs]}) & {op2} = {self.result}"
+                f"[Такт {self.cycles}] EXECUTE: and R{self.rd} ="
+                +" R{self.rs}({self.regs[self.rs]}) & {op2} = {self.result}"
             )
             self.update_flags(self.result, "and", self.regs[self.rs], op2)
 
@@ -255,7 +259,8 @@ class Processor:
                 op2 = self.memory.read_word(addr)
             self.result = self.regs[self.rs] | op2
             self.log(
-                f"[Такт {self.cycles}] EXECUTE: or R{self.rd} = R{self.rs}({self.regs[self.rs]}) | {op2} = {self.result}"
+                f"[Такт {self.cycles}] EXECUTE: or R{self.rd} = "
+                +"R{self.rs}({self.regs[self.rs]}) | {op2} = {self.result}"
             )
             self.update_flags(self.result, "or", self.regs[self.rs], op2)
 
